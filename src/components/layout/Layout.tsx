@@ -1,0 +1,25 @@
+import { useState } from 'react';
+import { Header } from './Header';
+import { BottomNavigation } from './BottomNavigation';
+import { HamburgerMenu } from './HamburgerMenu';
+
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+export function Layout({ children }: LayoutProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header onMenuClick={() => setMenuOpen(true)} />
+      <HamburgerMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+      
+      <main className="pb-20 md:pb-8">
+        {children}
+      </main>
+      
+      <BottomNavigation />
+    </div>
+  );
+}
