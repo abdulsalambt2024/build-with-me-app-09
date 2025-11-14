@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Layout } from "@/components/layout/Layout";
 import Home from "./pages/Home";
 import Posts from "./pages/Posts";
@@ -17,6 +19,7 @@ import AIStudio from "./pages/AIStudio";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,23 +31,27 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Layout>
+          <AuthProvider>
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/posts" element={<Posts />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/chat" element={<Chat />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/achievements" element={<Achievements />} />
-              <Route path="/announcements" element={<Announcements />} />
-              <Route path="/donations" element={<Donations />} />
-              <Route path="/ai-studio" element={<AIStudio />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/help" element={<Help />} />
-              <Route path="*" element={<NotFound />} />
+              {/* Public route */}
+              <Route path="/auth" element={<Auth />} />
+              
+              {/* Protected routes */}
+              <Route path="/" element={<Layout><ProtectedRoute><Home /></ProtectedRoute></Layout>} />
+              <Route path="/posts" element={<Layout><ProtectedRoute requiredRole="member"><Posts /></ProtectedRoute></Layout>} />
+              <Route path="/events" element={<Layout><ProtectedRoute><Events /></ProtectedRoute></Layout>} />
+              <Route path="/chat" element={<Layout><ProtectedRoute><Chat /></ProtectedRoute></Layout>} />
+              <Route path="/profile" element={<Layout><ProtectedRoute><Profile /></ProtectedRoute></Layout>} />
+              <Route path="/achievements" element={<Layout><ProtectedRoute><Achievements /></ProtectedRoute></Layout>} />
+              <Route path="/announcements" element={<Layout><ProtectedRoute><Announcements /></ProtectedRoute></Layout>} />
+              <Route path="/donations" element={<Layout><ProtectedRoute><Donations /></ProtectedRoute></Layout>} />
+              <Route path="/ai-studio" element={<Layout><ProtectedRoute requiredRole="member"><AIStudio /></ProtectedRoute></Layout>} />
+              <Route path="/admin" element={<Layout><ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute></Layout>} />
+              <Route path="/settings" element={<Layout><ProtectedRoute><Settings /></ProtectedRoute></Layout>} />
+              <Route path="/help" element={<Layout><ProtectedRoute><Help /></ProtectedRoute></Layout>} />
+              <Route path="*" element={<Layout><NotFound /></Layout>} />
             </Routes>
-          </Layout>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
