@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage: {
+        Row: {
+          created_at: string | null
+          feature_type: string
+          id: string
+          prompt: string | null
+          result_url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          feature_type: string
+          id?: string
+          prompt?: string | null
+          result_url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          feature_type?: string
+          id?: string
+          prompt?: string | null
+          result_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       announcement_reads: {
         Row: {
           announcement_id: string
@@ -73,6 +100,51 @@ export type Database = {
           priority?: string
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          banner_url: string | null
+          category: string | null
+          created_at: string | null
+          created_by: string
+          current_amount: number | null
+          description: string
+          end_date: string | null
+          id: string
+          status: string | null
+          target_amount: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          banner_url?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by: string
+          current_amount?: number | null
+          description: string
+          end_date?: string | null
+          id?: string
+          status?: string | null
+          target_amount: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          banner_url?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string
+          current_amount?: number | null
+          description?: string
+          end_date?: string | null
+          id?: string
+          status?: string | null
+          target_amount?: number
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -176,6 +248,53 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donations: {
+        Row: {
+          amount: number
+          campaign_id: string
+          created_at: string | null
+          donor_name: string | null
+          id: string
+          is_anonymous: boolean | null
+          message: string | null
+          payment_id: string | null
+          payment_method: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          campaign_id: string
+          created_at?: string | null
+          donor_name?: string | null
+          id?: string
+          is_anonymous?: boolean | null
+          message?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string
+          created_at?: string | null
+          donor_name?: string | null
+          id?: string
+          is_anonymous?: boolean | null
+          message?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -454,6 +573,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_super_admin_by_email: {
+        Args: { _email: string }
+        Returns: undefined
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
+import { EditRoleDialog } from '@/components/admin/EditRoleDialog';
 
 interface UserWithRole {
   id: string;
@@ -19,6 +20,7 @@ interface UserWithRole {
 
 export default function UserManagement() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -129,7 +131,11 @@ export default function UserManagement() {
                   <Badge variant={getRoleBadgeVariant(user.role)}>
                     {getRoleLabel(user.role)}
                   </Badge>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingUser(user)}
+                  >
                     Edit Role
                   </Button>
                 </div>
@@ -137,6 +143,14 @@ export default function UserManagement() {
             </Card>
           ))}
         </div>
+      )}
+
+      {editingUser && (
+        <EditRoleDialog
+          user={editingUser}
+          open={!!editingUser}
+          onOpenChange={(open) => !open && setEditingUser(null)}
+        />
       )}
     </div>
   );
