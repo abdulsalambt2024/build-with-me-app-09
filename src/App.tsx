@@ -17,6 +17,9 @@ import Announcements from "./pages/Announcements";
 import Donations from "./pages/Donations";
 import AIStudio from "./pages/AIStudio";
 import Admin from "./pages/Admin";
+import UserManagement from "./pages/admin/UserManagement";
+import ContentModeration from "./pages/admin/ContentModeration";
+import Analytics from "./pages/admin/Analytics";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
 import Auth from "./pages/Auth";
@@ -47,6 +50,9 @@ const App = () => (
               <Route path="/donations" element={<Layout><ProtectedRoute><Donations /></ProtectedRoute></Layout>} />
               <Route path="/ai-studio" element={<Layout><ProtectedRoute requiredRole="member"><AIStudio /></ProtectedRoute></Layout>} />
               <Route path="/admin" element={<Layout><ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute></Layout>} />
+              <Route path="/admin/users" element={<Layout><ProtectedRoute requiredRole="admin"><UserManagement /></ProtectedRoute></Layout>} />
+              <Route path="/admin/moderation" element={<Layout><ProtectedRoute requiredRole="admin"><ContentModeration /></ProtectedRoute></Layout>} />
+              <Route path="/admin/analytics" element={<Layout><ProtectedRoute requiredRole="admin"><Analytics /></ProtectedRoute></Layout>} />
               <Route path="/settings" element={<Layout><ProtectedRoute><Settings /></ProtectedRoute></Layout>} />
               <Route path="/help" element={<Layout><ProtectedRoute><Help /></ProtectedRoute></Layout>} />
               <Route path="*" element={<Layout><NotFound /></Layout>} />

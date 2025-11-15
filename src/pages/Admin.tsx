@@ -1,9 +1,11 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, FileText, BarChart3, Settings as SettingsIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Admin() {
   const { role } = useAuth();
+  const navigate = useNavigate();
 
   const adminCards = [
     {
@@ -45,7 +47,11 @@ export default function Admin() {
         {adminCards.map((card) => {
           const Icon = card.icon;
           return (
-            <Card key={card.path} className="hover:border-primary transition-colors cursor-pointer">
+            <Card
+              key={card.path}
+              className="hover:border-primary transition-colors cursor-pointer"
+              onClick={() => navigate(card.path)}
+            >
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
@@ -57,11 +63,6 @@ export default function Admin() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Coming soon in Phase 4
-                </p>
-              </CardContent>
             </Card>
           );
         })}
