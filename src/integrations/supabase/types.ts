@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          badge_url: string | null
+          category: string | null
+          description: string | null
+          earned_at: string | null
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          badge_url?: string | null
+          category?: string | null
+          description?: string | null
+          earned_at?: string | null
+          id?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          badge_url?: string | null
+          category?: string | null
+          description?: string | null
+          earned_at?: string | null
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_usage: {
         Row: {
           created_at: string | null
@@ -113,10 +143,12 @@ export type Database = {
           description: string
           end_date: string | null
           id: string
+          qr_code_url: string | null
           status: string | null
           target_amount: number
           title: string
           updated_at: string | null
+          upi_id: string | null
         }
         Insert: {
           banner_url?: string | null
@@ -127,10 +159,12 @@ export type Database = {
           description: string
           end_date?: string | null
           id?: string
+          qr_code_url?: string | null
           status?: string | null
           target_amount: number
           title: string
           updated_at?: string | null
+          upi_id?: string | null
         }
         Update: {
           banner_url?: string | null
@@ -141,10 +175,12 @@ export type Database = {
           description?: string
           end_date?: string | null
           id?: string
+          qr_code_url?: string | null
           status?: string | null
           target_amount?: number
           title?: string
           updated_at?: string | null
+          upi_id?: string | null
         }
         Relationships: []
       }
@@ -455,6 +491,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          read: boolean | null
+          related_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          read?: boolean | null
+          related_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          related_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       post_likes: {
         Row: {
           created_at: string
@@ -523,6 +592,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           full_name: string | null
           id: string
@@ -531,6 +601,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
@@ -539,10 +610,83 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          assigned_by: string
+          assigned_to: string
+          completed_at: string | null
+          created_at: string | null
+          deadline: string
+          description: string | null
+          id: string
+          priority: string | null
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_by: string
+          assigned_to: string
+          completed_at?: string | null
+          created_at?: string | null
+          deadline: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_by?: string
+          assigned_to?: string
+          completed_at?: string | null
+          created_at?: string | null
+          deadline?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_2fa: {
+        Row: {
+          backup_codes: string[] | null
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          secret: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          backup_codes?: string[] | null
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          secret: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          backup_codes?: string[] | null
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          secret?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []

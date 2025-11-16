@@ -20,6 +20,7 @@ import Admin from "./pages/Admin";
 import UserManagement from "./pages/admin/UserManagement";
 import ContentModeration from "./pages/admin/ContentModeration";
 import Analytics from "./pages/admin/Analytics";
+import ProfileEdit from "./pages/ProfileEdit";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
 import Auth from "./pages/Auth";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/events" element={<Layout><ProtectedRoute><Events /></ProtectedRoute></Layout>} />
               <Route path="/chat" element={<Layout><ProtectedRoute><Chat /></ProtectedRoute></Layout>} />
               <Route path="/profile" element={<Layout><ProtectedRoute><Profile /></ProtectedRoute></Layout>} />
+              <Route path="/profile/edit" element={<Layout><ProtectedRoute><ProfileEdit /></ProtectedRoute></Layout>} />
               <Route path="/achievements" element={<Layout><ProtectedRoute><Achievements /></ProtectedRoute></Layout>} />
               <Route path="/announcements" element={<Layout><ProtectedRoute><Announcements /></ProtectedRoute></Layout>} />
               <Route path="/donations" element={<Layout><ProtectedRoute><Donations /></ProtectedRoute></Layout>} />

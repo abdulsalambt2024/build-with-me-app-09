@@ -4,10 +4,30 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { LogOut, Mail, Shield } from 'lucide-react';
+import { LogOut, Mail, Shield, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Profile() {
   const { user, role, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
 
   const getRoleBadgeVariant = (userRole: string | null) => {
     switch (userRole) {
@@ -54,31 +74,50 @@ export default function Profile() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user.user_metadata?.avatar_url} />
+                <AvatarImage src={profile?.avatar_url} />
                 <AvatarFallback className="text-2xl">
-                  {user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
+                  {profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <CardTitle className="text-2xl">
-                  {user.user_metadata?.full_name || 'User'}
-                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-2xl">
+                    {profile?.full_name || user.email}
+                  </CardTitle>
+                  <VerifiedBadge userId={user?.id} role={role} />
+                </div>
                 <CardDescription className="flex items-center gap-2 mt-1">
                   <Mail className="h-4 w-4" />
                   {user.email}
                 </CardDescription>
               </div>
             </div>
-            <Button variant="outline" onClick={signOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate('/profile/edit')}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+              <Button variant="outline" onClick={signOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </CardHeader>
         
         <Separator />
         
         <CardContent className="pt-6 space-y-6">
+          {profile?.bio && (
+            <>
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Bio</h3>
+                <p className="text-muted-foreground">{profile.bio}</p>
+              </div>
+              <Separator />
+            </>
+          )}
+          
           <div>
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
               <Shield className="h-5 w-5" />
@@ -100,19 +139,10 @@ export default function Profile() {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Member Since:</span>
                 <span className="text-sm">
-                  {new Date(user.created_at).toLocaleDateString()}
+                  {new Date(profile?.created_at || user.created_at).toLocaleDateString()}
                 </span>
               </div>
             </div>
-          </div>
-
-          <Separator />
-
-          <div className="bg-muted/50 rounded-lg p-4">
-            <h4 className="font-semibold mb-2">Profile Editing Coming Soon</h4>
-            <p className="text-sm text-muted-foreground">
-              The ability to edit your profile details, upload avatars, and manage preferences will be available in the next update.
-            </p>
           </div>
         </CardContent>
       </Card>

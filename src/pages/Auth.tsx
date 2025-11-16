@@ -140,9 +140,10 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-primary">Parivartan</CardTitle>
-          <CardDescription>Community engagement platform</CardDescription>
+        <CardHeader className="text-center space-y-2">
+          <CardTitle className="text-2xl font-bold">ENLIGHTEN A CHILD, DISCOVER A PERSONALITY</CardTitle>
+          <p className="text-sm font-medium text-primary">Educating & Empowering Rural Youth</p>
+          <CardDescription className="text-xs">Making a difference, One Sunday at a Time</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
@@ -267,6 +268,16 @@ export default function Auth() {
               </form>
             </TabsContent>
           </Tabs>
+        </CardContent>
+        <CardContent className="pt-0">
+          <div className="text-center text-xs text-muted-foreground border-t pt-4">
+            <p>Created with ❤️ by</p>
+            <div className="flex items-center justify-center gap-4 mt-2">
+              <a href="https://www.instagram.com/beinghayat.er?igsh=MXV5dXFsZW5ycHY2cw==" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Hayat</a>
+              <span>•</span>
+              <a href="https://www.instagram.com/parivartan_miet?igsh=OHlnY3R5aDR5eGt6" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Parivartan</a>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

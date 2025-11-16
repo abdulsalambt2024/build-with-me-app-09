@@ -14,11 +14,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Loader2 } from 'lucide-react';
 import { useCreatePost } from '@/hooks/usePosts';
+import { MediaUpload } from './MediaUpload';
 
 export function CreatePostDialog() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const createPost = useCreatePost();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,10 +28,15 @@ export function CreatePostDialog() {
     
     if (!title.trim() || !content.trim()) return;
 
-    await createPost.mutateAsync({ title, content });
+    await createPost.mutateAsync({ 
+      title, 
+      content,
+      media_urls: mediaUrls.length > 0 ? mediaUrls : undefined 
+    });
     
     setTitle('');
     setContent('');
+    setMediaUrls([]);
     setOpen(false);
   };
 
@@ -69,6 +76,10 @@ export function CreatePostDialog() {
                 className="min-h-[150px]"
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Media</Label>
+              <MediaUpload onMediaUploaded={setMediaUrls} existingMedia={mediaUrls} />
             </div>
           </div>
           <DialogFooter>

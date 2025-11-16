@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Message } from '@/hooks/useChat';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -42,9 +43,12 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
             <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[70%]`}>
               <div className="flex items-center gap-2 mb-1">
                 {!isOwn && (
-                  <span className="text-sm font-medium">
-                    {message.user?.full_name || 'Unknown User'}
-                  </span>
+                  <>
+                    <span className="text-sm font-medium">
+                      {message.user?.full_name || 'Unknown User'}
+                    </span>
+                    <VerifiedBadge userId={message.user_id} />
+                  </>
                 )}
                 <span className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(message.created_at), {
@@ -52,16 +56,25 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
                   })}
                 </span>
               </div>
-              <div
-                className={`rounded-lg px-4 py-2 ${
-                  isOwn
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                }`}
-              >
-                <p className="text-sm whitespace-pre-wrap break-words">
-                  {message.content}
-                </p>
+              <div className="space-y-2">
+                <div
+                  className={`rounded-lg px-4 py-2 ${
+                    isOwn
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap break-words">
+                    {message.content}
+                  </p>
+                </div>
+                {message.media_url && (
+                  <img
+                    src={message.media_url}
+                    alt="Attachment"
+                    className="max-w-xs rounded-lg"
+                  />
+                )}
               </div>
             </div>
           </div>

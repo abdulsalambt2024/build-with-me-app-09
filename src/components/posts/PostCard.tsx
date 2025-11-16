@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Post } from '@/hooks/usePosts';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLikePost } from '@/hooks/usePosts';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +43,10 @@ export function PostCard({ post, onDelete }: PostCardProps) {
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-semibold">{post.profiles?.full_name || 'Unknown User'}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-semibold">{post.profiles?.full_name || 'Unknown User'}</p>
+                <VerifiedBadge userId={post.user_id} />
+              </div>
               <p className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
               </p>
