@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, FileText, BarChart3, Settings as SettingsIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { TaskManagement } from '@/components/tasks/TaskManagement';
 
 export default function Admin() {
   const { role } = useAuth();
@@ -80,6 +81,10 @@ export default function Admin() {
           </CardHeader>
         </Card>
       )}
+
+      <div className="mt-8">
+        <TaskManagement />
+      </div>
     </div>
   );
 }

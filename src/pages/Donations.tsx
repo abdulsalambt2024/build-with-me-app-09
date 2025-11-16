@@ -3,9 +3,12 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { useCampaigns } from '@/hooks/useDonations';
 import { Heart, TrendingUp, Calendar } from 'lucide-react';
+import { CreateCampaignDialog } from '@/components/donations/CreateCampaignDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Donations() {
   const { data: campaigns, isLoading } = useCampaigns();
+  const { role } = useAuth();
 
   if (isLoading) {
     return (
@@ -99,6 +102,8 @@ export default function Donations() {
           </CardContent>
         </Card>
       )}
+      
+      {(role === 'admin' || role === 'super_admin') && <CreateCampaignDialog />}
     </div>
   );
 }
