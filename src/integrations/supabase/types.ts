@@ -16,29 +16,35 @@ export type Database = {
     Tables: {
       achievements: {
         Row: {
+          achievement_type: string | null
           badge_url: string | null
           category: string | null
           description: string | null
           earned_at: string | null
           id: string
+          milestone_count: number | null
           title: string
           user_id: string
         }
         Insert: {
+          achievement_type?: string | null
           badge_url?: string | null
           category?: string | null
           description?: string | null
           earned_at?: string | null
           id?: string
+          milestone_count?: number | null
           title: string
           user_id: string
         }
         Update: {
+          achievement_type?: string | null
           badge_url?: string | null
           category?: string | null
           description?: string | null
           earned_at?: string | null
           id?: string
+          milestone_count?: number | null
           title?: string
           user_id?: string
         }
@@ -524,6 +530,45 @@ export type Database = {
         }
         Relationships: []
       }
+      popups: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          message: string
+          popup_type: string
+          show_date: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          message: string
+          popup_type: string
+          show_date: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          message?: string
+          popup_type?: string
+          show_date?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       post_likes: {
         Row: {
           created_at: string
@@ -593,29 +638,92 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          branch: string | null
+          course: string | null
           created_at: string
+          date_of_birth: string | null
+          father_name: string | null
           full_name: string | null
           id: string
+          roll_number: string | null
+          semester: string | null
           updated_at: string
           user_id: string
+          year: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          branch?: string | null
+          course?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          father_name?: string | null
           full_name?: string | null
           id?: string
+          roll_number?: string | null
+          semester?: string | null
           updated_at?: string
           user_id: string
+          year?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          branch?: string | null
+          course?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          father_name?: string | null
           full_name?: string | null
           id?: string
+          roll_number?: string | null
+          semester?: string | null
           updated_at?: string
           user_id?: string
+          year?: string | null
+        }
+        Relationships: []
+      }
+      slideshows: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          display_order: number | null
+          end_date: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          start_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          display_order?: number | null
+          end_date?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          start_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          display_order?: number | null
+          end_date?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          start_date?: string | null
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
