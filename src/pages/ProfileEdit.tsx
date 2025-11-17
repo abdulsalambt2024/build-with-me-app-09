@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function ProfileEdit() {
   const { user } = useAuth();
@@ -19,7 +19,14 @@ export default function ProfileEdit() {
   const [formData, setFormData] = useState({
     full_name: '',
     bio: '',
-    avatar_url: ''
+    avatar_url: '',
+    father_name: '',
+    course: '',
+    branch: '',
+    roll_number: '',
+    year: '',
+    semester: '',
+    date_of_birth: '',
   });
 
   useEffect(() => {
@@ -41,7 +48,14 @@ export default function ProfileEdit() {
         setFormData({
           full_name: data.full_name || '',
           bio: data.bio || '',
-          avatar_url: data.avatar_url || ''
+          avatar_url: data.avatar_url || '',
+          father_name: data.father_name || '',
+          course: data.course || '',
+          branch: data.branch || '',
+          roll_number: data.roll_number || '',
+          year: data.year || '',
+          semester: data.semester || '',
+          date_of_birth: data.date_of_birth || '',
         });
       }
     } catch (error) {
@@ -84,11 +98,7 @@ export default function ProfileEdit() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({
-          full_name: formData.full_name,
-          bio: formData.bio,
-          avatar_url: formData.avatar_url
-        })
+        .update(formData)
         .eq('user_id', user?.id);
 
       if (error) throw error;
@@ -116,26 +126,83 @@ export default function ProfileEdit() {
                 <AvatarImage src={formData.avatar_url} />
                 <AvatarFallback>{formData.full_name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  disabled={uploading}
-                  className="max-w-xs"
-                />
-                {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
-              </div>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                disabled={uploading}
+                className="max-w-xs"
+              />
+              {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
             </div>
 
-            <div>
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input
-                id="full_name"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                placeholder="Enter your name"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="full_name">Full Name *</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="father_name">Father's Name</Label>
+                <Input
+                  id="father_name"
+                  value={formData.father_name}
+                  onChange={(e) => setFormData({ ...formData, father_name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="course">Course</Label>
+                <Input
+                  id="course"
+                  value={formData.course}
+                  onChange={(e) => setFormData({ ...formData, course: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="branch">Branch</Label>
+                <Input
+                  id="branch"
+                  value={formData.branch}
+                  onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="roll_number">Roll Number</Label>
+                <Input
+                  id="roll_number"
+                  value={formData.roll_number}
+                  onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="year">Year</Label>
+                <Input
+                  id="year"
+                  value={formData.year}
+                  onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="semester">Semester</Label>
+                <Input
+                  id="semester"
+                  value={formData.semester}
+                  onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="date_of_birth">Date of Birth</Label>
+                <Input
+                  id="date_of_birth"
+                  type="date"
+                  value={formData.date_of_birth}
+                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                />
+              </div>
             </div>
 
             <div>
@@ -144,7 +211,6 @@ export default function ProfileEdit() {
                 id="bio"
                 value={formData.bio}
                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                placeholder="Tell us about yourself..."
                 rows={4}
               />
             </div>
