@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
-import { Search, UserPlus } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { EditRoleDialog } from '@/components/admin/EditRoleDialog';
+import { AddUserDialog } from '@/components/admin/AddUserDialog';
 
 interface UserWithRole {
   id: string;
@@ -84,10 +85,7 @@ export default function UserManagement() {
             Manage user roles and permissions
           </p>
         </div>
-        <Button>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add User
-        </Button>
+        <AddUserDialog />
       </div>
 
       <Card className="mb-6">

@@ -50,6 +50,45 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          status: string | null
+          task_type: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string | null
+          task_type: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string | null
+          task_type?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ai_usage: {
         Row: {
           created_at: string | null
@@ -141,6 +180,7 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          amount_presets: number[] | null
           banner_url: string | null
           category: string | null
           created_at: string | null
@@ -150,6 +190,7 @@ export type Database = {
           end_date: string | null
           id: string
           qr_code_url: string | null
+          short_description: string | null
           status: string | null
           target_amount: number
           title: string
@@ -157,6 +198,7 @@ export type Database = {
           upi_id: string | null
         }
         Insert: {
+          amount_presets?: number[] | null
           banner_url?: string | null
           category?: string | null
           created_at?: string | null
@@ -166,6 +208,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           qr_code_url?: string | null
+          short_description?: string | null
           status?: string | null
           target_amount: number
           title: string
@@ -173,6 +216,7 @@ export type Database = {
           upi_id?: string | null
         }
         Update: {
+          amount_presets?: number[] | null
           banner_url?: string | null
           category?: string | null
           created_at?: string | null
@@ -182,6 +226,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           qr_code_url?: string | null
+          short_description?: string | null
           status?: string | null
           target_amount?: number
           title?: string
@@ -249,6 +294,63 @@ export type Database = {
         }
         Relationships: []
       }
+      chatbot_conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          response: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          response?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chatbot_faq: {
+        Row: {
+          answer: string
+          category: string | null
+          created_at: string | null
+          created_by: string
+          id: string
+          keywords: string[] | null
+          question: string
+          updated_at: string | null
+        }
+        Insert: {
+          answer: string
+          category?: string | null
+          created_at?: string | null
+          created_by: string
+          id?: string
+          keywords?: string[] | null
+          question: string
+          updated_at?: string | null
+        }
+        Update: {
+          answer?: string
+          category?: string | null
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          keywords?: string[] | null
+          question?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           content: string
@@ -290,6 +392,38 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donation_receipts: {
+        Row: {
+          created_at: string | null
+          donation_id: string
+          id: string
+          receipt_number: string
+          receipt_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          donation_id: string
+          id?: string
+          receipt_number: string
+          receipt_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          donation_id?: string
+          id?: string
+          receipt_number?: string
+          receipt_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donation_receipts_donation_id_fkey"
+            columns: ["donation_id"]
+            isOneToOne: false
+            referencedRelation: "donations"
             referencedColumns: ["id"]
           },
         ]
@@ -456,13 +590,48 @@ export type Database = {
           },
         ]
       }
+      message_read_status: {
+        Row: {
+          id: string
+          message_id: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_read_status_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
           created_at: string | null
+          deleted_at: string | null
           id: string
+          is_deleted: boolean | null
+          is_pinned: boolean | null
           media_url: string | null
           message_type: string | null
+          pinned_at: string | null
+          pinned_by: string | null
+          reply_to_message_id: string | null
           room_id: string
           updated_at: string | null
           user_id: string
@@ -470,9 +639,15 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
+          is_deleted?: boolean | null
+          is_pinned?: boolean | null
           media_url?: string | null
           message_type?: string | null
+          pinned_at?: string | null
+          pinned_by?: string | null
+          reply_to_message_id?: string | null
           room_id: string
           updated_at?: string | null
           user_id: string
@@ -480,14 +655,27 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
+          is_deleted?: boolean | null
+          is_pinned?: boolean | null
           media_url?: string | null
           message_type?: string | null
+          pinned_at?: string | null
+          pinned_by?: string | null
+          reply_to_message_id?: string | null
           room_id?: string
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_room_id_fkey"
             columns: ["room_id"]
@@ -769,12 +957,46 @@ export type Database = {
         }
         Relationships: []
       }
+      typing_indicators: {
+        Row: {
+          id: string
+          is_typing: boolean | null
+          room_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_typing?: boolean | null
+          room_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_typing?: boolean | null
+          room_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "typing_indicators_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_2fa: {
         Row: {
           backup_codes: string[] | null
           created_at: string | null
           enabled: boolean | null
           id: string
+          qr_code_url: string | null
+          recovery_codes_hashed: string[] | null
           secret: string
           updated_at: string | null
           user_id: string
@@ -784,6 +1006,8 @@ export type Database = {
           created_at?: string | null
           enabled?: boolean | null
           id?: string
+          qr_code_url?: string | null
+          recovery_codes_hashed?: string[] | null
           secret: string
           updated_at?: string | null
           user_id: string
@@ -793,6 +1017,8 @@ export type Database = {
           created_at?: string | null
           enabled?: boolean | null
           id?: string
+          qr_code_url?: string | null
+          recovery_codes_hashed?: string[] | null
           secret?: string
           updated_at?: string | null
           user_id?: string
@@ -828,6 +1054,15 @@ export type Database = {
       assign_super_admin_by_email: {
         Args: { _email: string }
         Returns: undefined
+      }
+      generate_upi_qr_data: {
+        Args: {
+          amount?: number
+          note?: string
+          payee_name: string
+          upi_id: string
+        }
+        Returns: string
       }
       get_user_role: {
         Args: { _user_id: string }
