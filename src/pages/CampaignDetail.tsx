@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import QRCode from 'qrcode';
 import { ExternalLink, Download } from 'lucide-react';
+import { donationSchema } from '@/lib/validation';
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -67,15 +68,29 @@ export default function CampaignDetail() {
 
   const donateMutation = useMutation({
     mutationFn: async (donationData: any) => {
+      // Validate donation data
+      const validation = donationSchema.safeParse({
+        amount: parseFloat(amount),
+        donorName: donorName.trim(),
+        message: message.trim(),
+        isAnonymous
+      });
+
+      if (!validation.success) {
+        throw new Error(validation.error.errors[0].message);
+      }
+
+      // NOTE: This is still insecure - real payment gateway integration required
+      // This validation only prevents obviously bad data, not payment fraud
       const { data, error } = await supabase
         .from('donations')
         .insert({
           campaign_id: id,
           user_id: user?.id,
-          donor_name: isAnonymous ? null : donorName || user?.email,
-          amount: parseFloat(amount),
-          message,
-          is_anonymous: isAnonymous,
+          donor_name: isAnonymous ? null : validation.data.donorName || user?.email,
+          amount: validation.data.amount,
+          message: validation.data.message,
+          is_anonymous: validation.data.isAnonymous,
           payment_method: 'upi',
         })
         .select()

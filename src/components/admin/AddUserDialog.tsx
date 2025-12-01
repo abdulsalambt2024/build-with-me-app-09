@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import { createUserSchema } from '@/lib/validation';
 
 export function AddUserDialog() {
   const queryClient = useQueryClient();
@@ -19,44 +20,30 @@ export function AddUserDialog() {
 
   const addUserMutation = useMutation({
     mutationFn: async () => {
-      // Create user with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email,
+      // Validate inputs
+      const validation = createUserSchema.safeParse({
+        email: email.trim(),
+        fullName: fullName.trim(),
         password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: fullName
+        role
+      });
+
+      if (!validation.success) {
+        throw new Error(validation.error.errors[0].message);
+      }
+
+      // Call Edge Function to create user (server-side only)
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: validation.data.email,
+          fullName: validation.data.fullName,
+          password: validation.data.password,
+          role: validation.data.role
         }
       });
 
-      if (authError) throw authError;
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          full_name: fullName
-        });
-
-      if (profileError) throw profileError;
-
-      // Set role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', authData.user.id);
-
-      const { error: insertRoleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role
-        });
-
-      if (insertRoleError) throw insertRoleError;
-
-      return authData;
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });

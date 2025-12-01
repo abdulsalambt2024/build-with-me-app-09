@@ -1,1 +1,19 @@
 project_id = "hbkptilrqqsqjlkabpbe"
+
+[functions.chatbot]
+verify_jwt = true
+
+[functions.setup-2fa]
+verify_jwt = true
+
+[functions.verify-2fa]
+verify_jwt = true
+
+[functions.disable-2fa]
+verify_jwt = true
+
+[functions.ai-studio]
+verify_jwt = true
+
+[functions.create-user]
+verify_jwt = true
