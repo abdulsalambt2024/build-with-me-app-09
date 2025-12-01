@@ -17,3 +17,15 @@ verify_jwt = true
 
 [functions.create-user]
 verify_jwt = true
+
+[functions.log-error]
+verify_jwt = true
+
+[functions.initiate-payment]
+verify_jwt = false
+
+[functions.verify-payment]
+verify_jwt = false
+
+[functions.payment-webhook]
+verify_jwt = false

@@ -196,6 +196,7 @@ export type Database = {
           title: string
           updated_at: string | null
           upi_id: string | null
+          webhook_secret: string | null
         }
         Insert: {
           amount_presets?: number[] | null
@@ -214,6 +215,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           upi_id?: string | null
+          webhook_secret?: string | null
         }
         Update: {
           amount_presets?: number[] | null
@@ -232,6 +234,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           upi_id?: string | null
+          webhook_secret?: string | null
         }
         Relationships: []
       }
@@ -475,6 +478,45 @@ export type Database = {
           },
         ]
       }
+      error_logs: {
+        Row: {
+          component_name: string | null
+          created_at: string | null
+          error_message: string
+          error_stack: string | null
+          id: string
+          metadata: Json | null
+          severity: string | null
+          url: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          component_name?: string | null
+          created_at?: string | null
+          error_message: string
+          error_stack?: string | null
+          id?: string
+          metadata?: Json | null
+          severity?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          component_name?: string | null
+          created_at?: string | null
+          error_message?: string
+          error_stack?: string | null
+          id?: string
+          metadata?: Json | null
+          severity?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       event_rsvps: {
         Row: {
           created_at: string
@@ -717,6 +759,72 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          campaign_id: string
+          created_at: string | null
+          donation_id: string | null
+          gateway_response: Json | null
+          id: string
+          payment_gateway: string
+          payment_id: string | null
+          payment_method: string | null
+          status: string | null
+          transaction_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          amount: number
+          campaign_id: string
+          created_at?: string | null
+          donation_id?: string | null
+          gateway_response?: Json | null
+          id?: string
+          payment_gateway: string
+          payment_id?: string | null
+          payment_method?: string | null
+          status?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string
+          created_at?: string | null
+          donation_id?: string | null
+          gateway_response?: Json | null
+          id?: string
+          payment_gateway?: string
+          payment_id?: string | null
+          payment_method?: string | null
+          status?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_donation_id_fkey"
+            columns: ["donation_id"]
+            isOneToOne: false
+            referencedRelation: "donations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       popups: {
         Row: {
