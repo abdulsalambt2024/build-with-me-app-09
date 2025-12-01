@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { MessageCircle, X, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { chatbotMessageSchema } from '@/lib/validation';
 
 export function ChatbotAssistant() {
   const { user } = useAuth();
@@ -28,19 +29,28 @@ export function ChatbotAssistant() {
 
   const chatMutation = useMutation({
     mutationFn: async (userMessage: string) => {
+      // Validate message
+      const validation = chatbotMessageSchema.safeParse({
+        message: userMessage.trim()
+      });
+
+      if (!validation.success) {
+        throw new Error(validation.error.errors[0].message);
+      }
+
       // Save conversation
       await supabase
         .from('chatbot_conversations')
         .insert({
           user_id: user?.id,
-          message: userMessage,
+          message: validation.data.message,
           response: 'Pending...'
         });
 
       // Call AI chatbot edge function
       const { data, error } = await supabase.functions.invoke('chatbot', {
         body: {
-          message: userMessage,
+          message: validation.data.message,
           faqContext: faqData,
           conversationHistory: conversation
         }

@@ -40,7 +40,7 @@ export function TwoFactorAuth() {
   const setupMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('setup-2fa', {
-        body: { userId: user?.id, email: user?.email }
+        body: {}  // User ID extracted from JWT token in Edge Function
       });
       
       if (error) throw error;
@@ -63,7 +63,7 @@ export function TwoFactorAuth() {
   const verifyMutation = useMutation({
     mutationFn: async (code: string) => {
       const { data, error } = await supabase.functions.invoke('verify-2fa', {
-        body: { userId: user?.id, token: code, secret }
+        body: { token: code, secret }  // User ID extracted from JWT
       });
       
       if (error) throw error;
@@ -82,7 +82,7 @@ export function TwoFactorAuth() {
   const disableMutation = useMutation({
     mutationFn: async (code: string) => {
       const { data, error } = await supabase.functions.invoke('disable-2fa', {
-        body: { userId: user?.id, token: code }
+        body: { token: code }  // User ID extracted from JWT
       });
       
       if (error) throw error;

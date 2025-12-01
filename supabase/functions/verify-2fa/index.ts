@@ -13,7 +13,29 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, token, secret } = await req.json();
+    // Get user from JWT
+    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { token, secret } = await req.json();
+    const userId = user.id;
     
     // Create TOTP instance
     const totp = new OTPAuth.TOTP({
@@ -29,11 +51,7 @@ serve(async (req) => {
       throw new Error('Invalid token');
     }
     
-    // Enable 2FA
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
+    // Enable 2FA (supabase already initialized above)
     const { error } = await supabase
       .from('user_2fa')
       .update({ enabled: true })
