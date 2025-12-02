@@ -123,8 +123,28 @@ export default function CampaignDetail() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Thank you for your donation!');
+      
+      // Send confirmation email if donor provided name (not anonymous)
+      if (!donationForm.is_anonymous && donationForm.donor_name) {
+        try {
+          await supabase.functions.invoke('send-donation-email', {
+            body: {
+              type: 'donation_success',
+              recipientEmail: '', // Would need donor email - skipping for now
+              recipientName: donationForm.donor_name,
+              donationAmount: parseFloat(donationForm.amount),
+              campaignTitle: campaign?.title,
+              transactionId: paymentId,
+            },
+          });
+        } catch (emailError) {
+          // Don't fail the donation if email fails
+          console.log('Email notification failed:', emailError);
+        }
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['campaign', id] });
       queryClient.invalidateQueries({ queryKey: ['donations', id] });

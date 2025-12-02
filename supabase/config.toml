@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.payment-webhook]
 verify_jwt = false
+
+[functions.send-donation-email]
+verify_jwt = false

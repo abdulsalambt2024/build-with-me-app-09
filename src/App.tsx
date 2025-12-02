@@ -22,6 +22,10 @@ import UserManagement from "./pages/admin/UserManagement";
 import ContentModeration from "./pages/admin/ContentModeration";
 import Analytics from "./pages/admin/Analytics";
 import AdminTasks from "./pages/admin/AdminTasks";
+import ErrorLogs from "./pages/admin/ErrorLogs";
+import PaymentTransactions from "./pages/admin/PaymentTransactions";
+import Attendance from "./pages/admin/Attendance";
+import SlideshowManager from "./pages/admin/SlideshowManager";
 import ProfileEdit from "./pages/ProfileEdit";
 import CampaignDetail from "./pages/CampaignDetail";
 import Settings from "./pages/Settings";
@@ -46,7 +50,7 @@ const App = () => (
               
               {/* Protected routes */}
               <Route path="/" element={<Layout><ProtectedRoute><Home /></ProtectedRoute></Layout>} />
-              <Route path="/posts" element={<Layout><ProtectedRoute requiredRole="member"><Posts /></ProtectedRoute></Layout>} />
+              <Route path="/posts" element={<Layout><ProtectedRoute><Posts /></ProtectedRoute></Layout>} />
               <Route path="/events" element={<Layout><ProtectedRoute><Events /></ProtectedRoute></Layout>} />
               <Route path="/chat" element={<Layout><ProtectedRoute><Chat /></ProtectedRoute></Layout>} />
               <Route path="/profile" element={<Layout><ProtectedRoute><Profile /></ProtectedRoute></Layout>} />
@@ -60,6 +64,10 @@ const App = () => (
               <Route path="/admin/moderation" element={<Layout><ProtectedRoute requiredRole="admin"><ContentModeration /></ProtectedRoute></Layout>} />
               <Route path="/admin/analytics" element={<Layout><ProtectedRoute requiredRole="admin"><Analytics /></ProtectedRoute></Layout>} />
               <Route path="/admin/tasks" element={<Layout><ProtectedRoute requiredRole="admin"><AdminTasks /></ProtectedRoute></Layout>} />
+              <Route path="/admin/errors" element={<Layout><ProtectedRoute requiredRole="super_admin"><ErrorLogs /></ProtectedRoute></Layout>} />
+              <Route path="/admin/payments" element={<Layout><ProtectedRoute requiredRole="admin"><PaymentTransactions /></ProtectedRoute></Layout>} />
+              <Route path="/admin/attendance" element={<Layout><ProtectedRoute requiredRole="admin"><Attendance /></ProtectedRoute></Layout>} />
+              <Route path="/admin/slideshow" element={<Layout><ProtectedRoute requiredRole="admin"><SlideshowManager /></ProtectedRoute></Layout>} />
               <Route path="/donations/:id" element={<Layout><ProtectedRoute><CampaignDetail /></ProtectedRoute></Layout>} />
               <Route path="/settings" element={<Layout><ProtectedRoute><Settings /></ProtectedRoute></Layout>} />
               <Route path="/help" element={<Layout><ProtectedRoute><Help /></ProtectedRoute></Layout>} />
