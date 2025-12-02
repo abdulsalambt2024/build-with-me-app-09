@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FileText, BarChart3, Settings as SettingsIcon } from 'lucide-react';
+import { Users, FileText, BarChart3, Settings as SettingsIcon, Bug, CreditCard, CalendarCheck, Image } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TaskManagement } from '@/components/tasks/TaskManagement';
 
@@ -26,6 +26,30 @@ export default function Admin() {
       description: 'View engagement metrics and reports',
       icon: BarChart3,
       path: '/admin/analytics',
+    },
+    {
+      title: 'Attendance',
+      description: 'Mark and track member attendance',
+      icon: CalendarCheck,
+      path: '/admin/attendance',
+    },
+    {
+      title: 'Slideshow Manager',
+      description: 'Manage homepage slideshow images',
+      icon: Image,
+      path: '/admin/slideshow',
+    },
+    {
+      title: 'Error Logs',
+      description: 'Monitor and debug application errors',
+      icon: Bug,
+      path: '/admin/errors',
+    },
+    {
+      title: 'Payment Transactions',
+      description: 'View donation payments and verify transactions',
+      icon: CreditCard,
+      path: '/admin/payments',
     },
     {
       title: 'System Settings',
