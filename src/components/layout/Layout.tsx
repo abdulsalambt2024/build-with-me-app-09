@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Header } from './Header';
 import { BottomNavigation } from './BottomNavigation';
 import { HamburgerMenu } from './HamburgerMenu';
+import { EnhancedChatbot } from '@/components/chatbot/EnhancedChatbot';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export function Layout({ children }: LayoutProps) {
       </main>
       
       <BottomNavigation />
+      <EnhancedChatbot />
     </div>
   );
 }

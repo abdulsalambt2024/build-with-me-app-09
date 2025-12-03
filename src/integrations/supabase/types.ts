@@ -309,6 +309,7 @@ export type Database = {
           created_by: string
           id: string
           is_group: boolean | null
+          is_private: boolean | null
           name: string | null
           updated_at: string | null
         }
@@ -317,6 +318,7 @@ export type Database = {
           created_by: string
           id?: string
           is_group?: boolean | null
+          is_private?: boolean | null
           name?: string | null
           updated_at?: string | null
         }
@@ -325,6 +327,7 @@ export type Database = {
           created_by?: string
           id?: string
           is_group?: boolean | null
+          is_private?: boolean | null
           name?: string | null
           updated_at?: string | null
         }
@@ -633,6 +636,75 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          status: string | null
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          status?: string | null
+          subject: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          status?: string | null
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      member_statistics: {
+        Row: {
+          attendance_percentage: number | null
+          contribution_score: number | null
+          created_at: string | null
+          events_participated: number | null
+          id: string
+          last_calculated_at: string | null
+          posts_created: number | null
+          tasks_completed: number | null
+          tasks_total: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attendance_percentage?: number | null
+          contribution_score?: number | null
+          created_at?: string | null
+          events_participated?: number | null
+          id?: string
+          last_calculated_at?: string | null
+          posts_created?: number | null
+          tasks_completed?: number | null
+          tasks_total?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attendance_percentage?: number | null
+          contribution_score?: number | null
+          created_at?: string | null
+          events_participated?: number | null
+          id?: string
+          last_calculated_at?: string | null
+          posts_created?: number | null
+          tasks_completed?: number | null
+          tasks_total?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_reactions: {
         Row: {
           created_at: string | null
@@ -699,6 +771,7 @@ export type Database = {
           content: string
           created_at: string | null
           deleted_at: string | null
+          edited_at: string | null
           id: string
           is_deleted: boolean | null
           is_pinned: boolean | null
@@ -715,6 +788,7 @@ export type Database = {
           content: string
           created_at?: string | null
           deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           is_deleted?: boolean | null
           is_pinned?: boolean | null
@@ -731,6 +805,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           is_deleted?: boolean | null
           is_pinned?: boolean | null
@@ -1014,6 +1089,33 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string | null
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       slideshows: {
         Row: {
           created_at: string | null
@@ -1053,6 +1155,33 @@ export type Database = {
           start_date?: string | null
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      suggestions: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          status: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          status?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          status?: string | null
+          title?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1183,6 +1312,30 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      verification_badges: {
+        Row: {
+          badge_type: string
+          granted_at: string | null
+          granted_by: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_type?: string
+          granted_at?: string | null
+          granted_by: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_type?: string
+          granted_at?: string | null
+          granted_by?: string
+          id?: string
           user_id?: string
         }
         Relationships: []
