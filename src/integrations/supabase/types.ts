@@ -870,6 +870,8 @@ export type Database = {
       }
       payment_transactions: {
         Row: {
+          admin_verified_at: string | null
+          admin_verified_by: string | null
           amount: number
           campaign_id: string
           created_at: string | null
@@ -883,9 +885,12 @@ export type Database = {
           transaction_id: string | null
           updated_at: string | null
           user_id: string | null
+          verification_status: string | null
           verified_at: string | null
         }
         Insert: {
+          admin_verified_at?: string | null
+          admin_verified_by?: string | null
           amount: number
           campaign_id: string
           created_at?: string | null
@@ -899,9 +904,12 @@ export type Database = {
           transaction_id?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verification_status?: string | null
           verified_at?: string | null
         }
         Update: {
+          admin_verified_at?: string | null
+          admin_verified_by?: string | null
           amount?: number
           campaign_id?: string
           created_at?: string | null
@@ -915,6 +923,7 @@ export type Database = {
           transaction_id?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verification_status?: string | null
           verified_at?: string | null
         }
         Relationships: [

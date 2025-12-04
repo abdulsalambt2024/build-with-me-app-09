@@ -2,15 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Send, Image as ImageIcon, Paperclip, Mic, Reply, Pin, Trash2, Check, CheckCheck } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Send, Image as ImageIcon, Paperclip, Mic, Reply, Pin, Trash2, Check, CheckCheck, MoreVertical, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { chatMessageSchema } from '@/lib/validation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Message {
   id: string;
@@ -52,21 +58,18 @@ export function UnifiedGroupChat() {
 
       if (messagesError) throw messagesError;
 
-      // Fetch profiles separately
       const userIds = messagesData?.map(m => m.user_id) || [];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, full_name, avatar_url')
         .in('user_id', userIds);
 
-      // Fetch reactions
       const messageIds = messagesData?.map(m => m.id) || [];
       const { data: reactions } = await supabase
         .from('message_reactions')
         .select('*')
         .in('message_id', messageIds);
 
-      // Fetch read status
       const { data: readStatus } = await supabase
         .from('message_read_status')
         .select('*')
@@ -122,20 +125,24 @@ export function UnifiedGroupChat() {
     };
   }, [user?.id, queryClient]);
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Send message
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
+      // Validate message
+      const validation = chatMessageSchema.safeParse({ content });
+      if (!validation.success) {
+        throw new Error(validation.error.errors[0].message);
+      }
+
       const { error } = await supabase
         .from('messages')
         .insert({
           room_id: UNIFIED_ROOM_ID,
           user_id: user?.id,
-          content,
+          content: validation.data.content,
           reply_to_message_id: replyingTo?.id,
         });
 
@@ -146,19 +153,17 @@ export function UnifiedGroupChat() {
       setReplyingTo(null);
       queryClient.invalidateQueries({ queryKey: ['unified-chat-messages'] });
     },
-    onError: () => {
-      toast.error('Failed to send message');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send message');
     }
   });
 
-  // Delete message
   const deleteMutation = useMutation({
     mutationFn: async (messageId: string) => {
       const { error } = await supabase
         .from('messages')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', messageId);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -167,7 +172,6 @@ export function UnifiedGroupChat() {
     }
   });
 
-  // Pin message (admin only)
   const pinMutation = useMutation({
     mutationFn: async ({ messageId, isPinned }: { messageId: string; isPinned: boolean }) => {
       const { error } = await supabase
@@ -178,7 +182,6 @@ export function UnifiedGroupChat() {
           pinned_at: !isPinned ? new Date().toISOString() : null
         })
         .eq('id', messageId);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -186,14 +189,10 @@ export function UnifiedGroupChat() {
     }
   });
 
-  // Mark as read
   const markAsRead = async (messageId: string) => {
     await supabase
       .from('message_read_status')
-      .upsert({
-        message_id: messageId,
-        user_id: user?.id,
-      });
+      .upsert({ message_id: messageId, user_id: user?.id });
   };
 
   useEffect(() => {
@@ -204,15 +203,10 @@ export function UnifiedGroupChat() {
     });
   }, [messages, user?.id]);
 
-  // Typing indicator
   const handleTyping = async () => {
     await supabase
       .from('typing_indicators')
-      .upsert({
-        room_id: UNIFIED_ROOM_ID,
-        user_id: user?.id,
-        is_typing: true,
-      });
+      .upsert({ room_id: UNIFIED_ROOM_ID, user_id: user?.id, is_typing: true });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -225,124 +219,130 @@ export function UnifiedGroupChat() {
   const isAdmin = role === 'admin' || role === 'super_admin';
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-12rem)]">
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold">Community Group Chat</h2>
-        <p className="text-sm text-muted-foreground">
-          {messages.length} messages
-        </p>
+    <div className="flex flex-col h-full bg-gradient-to-b from-emerald-50/50 to-background dark:from-emerald-950/20">
+      {/* Header */}
+      <div className="bg-emerald-600 dark:bg-emerald-700 text-white p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+          <Users className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <h2 className="font-semibold">PARIVARTAN Community</h2>
+          <p className="text-xs text-emerald-100">{messages.length} messages</p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-emerald-500">
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>View Group Info</DropdownMenuItem>
+            <DropdownMenuItem>Search Messages</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <ScrollArea className="flex-1 p-4">
         {isLoading ? (
-          <div className="text-center text-muted-foreground">Loading messages...</div>
+          <div className="text-center text-muted-foreground py-8">Loading messages...</div>
         ) : (
-          <>
+          <div className="space-y-3">
             {messages.map((msg) => {
               const isOwn = msg.user_id === user?.id;
               const readCount = msg.read_status.length;
               
               return (
-                <div
-                  key={msg.id}
-                  className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''} ${msg.is_pinned ? 'bg-accent/20 p-2 rounded-lg' : ''}`}
-                >
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={msg.profiles.avatar_url} />
-                    <AvatarFallback>{msg.profiles.full_name?.[0]}</AvatarFallback>
-                  </Avatar>
-                  
-                  <div className={`flex-1 ${isOwn ? 'text-right' : ''}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{msg.profiles.full_name}</span>
-                      <VerifiedBadge />
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
-                      </span>
-                      {msg.is_pinned && <Pin className="h-3 w-3 text-primary" />}
-                    </div>
+                <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`flex gap-2 max-w-[80%] ${isOwn ? 'flex-row-reverse' : ''}`}>
+                    {!isOwn && (
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarImage src={msg.profiles.avatar_url} />
+                        <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs">
+                          {msg.profiles.full_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     
-                    <div className={`mt-1 inline-block rounded-lg px-3 py-2 ${isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                      {msg.content}
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mt-1">
-                      {isOwn && (
-                        <>
-                          {readCount === 0 ? <Check className="h-3 w-3 text-muted-foreground" /> : <CheckCheck className="h-3 w-3 text-blue-500" />}
-                        </>
-                      )}
-                      
+                    <div className={`rounded-lg px-3 py-2 ${isOwn ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-card shadow-sm'} ${msg.is_pinned ? 'ring-2 ring-amber-400' : ''}`}>
                       {!isOwn && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setReplyingTo(msg)}
-                        >
-                          <Reply className="h-3 w-3" />
-                        </Button>
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            {msg.profiles.full_name}
+                          </span>
+                          <VerifiedBadge className="h-3 w-3" />
+                        </div>
                       )}
                       
-                      {isAdmin && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => pinMutation.mutate({ messageId: msg.id, isPinned: msg.is_pinned })}
-                          >
-                            <Pin className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteMutation.mutate(msg.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </>
-                      )}
+                      <p className="text-sm break-words">{msg.content}</p>
                       
-                      {isOwn && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteMutation.mutate(msg.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
+                      <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : ''}`}>
+                        <span className={`text-[10px] ${isOwn ? 'text-emerald-100' : 'text-muted-foreground'}`}>
+                          {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                        </span>
+                        {isOwn && (
+                          readCount > 0 ? <CheckCheck className="h-3 w-3 text-blue-300" /> : <Check className="h-3 w-3 text-emerald-200" />
+                        )}
+                        {msg.is_pinned && <Pin className="h-3 w-3 text-amber-400" />}
+                      </div>
                     </div>
+
+                    {/* Message Actions */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-muted">
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align={isOwn ? 'end' : 'start'}>
+                        <DropdownMenuItem onClick={() => setReplyingTo(msg)}>
+                          <Reply className="h-3 w-3 mr-2" /> Reply
+                        </DropdownMenuItem>
+                        {isAdmin && (
+                          <DropdownMenuItem onClick={() => pinMutation.mutate({ messageId: msg.id, isPinned: msg.is_pinned })}>
+                            <Pin className="h-3 w-3 mr-2" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
+                          </DropdownMenuItem>
+                        )}
+                        {(isOwn || isAdmin) && (
+                          <DropdownMenuItem onClick={() => deleteMutation.mutate(msg.id)} className="text-destructive">
+                            <Trash2 className="h-3 w-3 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               );
             })}
             <div ref={messagesEndRef} />
-          </>
+          </div>
         )}
-      </div>
+      </ScrollArea>
 
       {/* Typing indicator */}
       {typingUsers.size > 0 && (
-        <div className="px-4 text-sm text-muted-foreground">
+        <div className="px-4 py-1 text-xs text-muted-foreground italic">
           Someone is typing...
         </div>
       )}
 
       {/* Reply preview */}
       {replyingTo && (
-        <div className="px-4 py-2 bg-muted flex items-center justify-between">
-          <span className="text-sm">Replying to {replyingTo.profiles.full_name}</span>
-          <Button variant="ghost" size="sm" onClick={() => setReplyingTo(null)}>Cancel</Button>
+        <div className="mx-4 mb-2 px-3 py-2 bg-muted rounded-lg flex items-center justify-between border-l-4 border-emerald-500">
+          <div>
+            <span className="text-xs text-emerald-600 font-medium">{replyingTo.profiles.full_name}</span>
+            <p className="text-xs text-muted-foreground truncate">{replyingTo.content}</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setReplyingTo(null)} className="h-6 w-6 p-0">×</Button>
         </div>
       )}
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t flex gap-2">
-        <Button type="button" variant="ghost" size="icon">
+      <form onSubmit={handleSubmit} className="p-3 bg-background border-t flex items-center gap-2">
+        <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
           <ImageIcon className="h-5 w-5" />
         </Button>
-        <Button type="button" variant="ghost" size="icon">
+        <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
           <Paperclip className="h-5 w-5" />
         </Button>
         <Input
@@ -352,15 +352,18 @@ export function UnifiedGroupChat() {
             handleTyping();
           }}
           placeholder="Type a message..."
-          className="flex-1"
+          className="flex-1 rounded-full bg-muted border-0"
         />
-        <Button type="button" variant="ghost" size="icon">
-          <Mic className="h-5 w-5" />
-        </Button>
-        <Button type="submit" size="icon" disabled={!message.trim() || sendMutation.isPending}>
-          <Send className="h-5 w-5" />
-        </Button>
+        {message.trim() ? (
+          <Button type="submit" size="icon" className="rounded-full bg-emerald-500 hover:bg-emerald-600" disabled={sendMutation.isPending}>
+            <Send className="h-5 w-5" />
+          </Button>
+        ) : (
+          <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
+            <Mic className="h-5 w-5" />
+          </Button>
+        )}
       </form>
-    </Card>
+    </div>
   );
 }
