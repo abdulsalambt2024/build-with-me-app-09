@@ -13,7 +13,11 @@ serve(async (req) => {
   try {
     const { message, faqContext, conversationHistory } = await req.json();
     
-    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
+    }
     
     // Build context from FAQ
     const faqText = faqContext?.map((faq: any) => 
@@ -38,26 +42,42 @@ ${faqText}
 
 Be friendly, concise, and helpful. If you don't know something, suggest contacting an admin.`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_API_KEY}`, {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: systemPrompt + '\n\nUser: ' + message
-              }
-            ]
-          }
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...(conversationHistory || []),
+          { role: 'user', content: message }
         ]
       })
     });
 
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'API credits exhausted. Please contact admin.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const errorText = await response.text();
+      console.error('Lovable AI API error:', response.status, errorText);
+      throw new Error(`AI API request failed: ${response.status}`);
+    }
+
     const data = await response.json();
-    const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not process that request.';
+    const botResponse = data.choices?.[0]?.message?.content || 'Sorry, I could not process that request.';
     
     return new Response(
       JSON.stringify({ response: botResponse }),
