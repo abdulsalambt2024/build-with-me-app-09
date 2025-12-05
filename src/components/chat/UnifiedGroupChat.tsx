@@ -270,7 +270,7 @@ export function UnifiedGroupChat() {
                           <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             {msg.profiles.full_name}
                           </span>
-                          <VerifiedBadge className="h-3 w-3" />
+                          <VerifiedBadge userId={msg.user_id} className="h-3 w-3" />
                         </div>
                       )}
                       

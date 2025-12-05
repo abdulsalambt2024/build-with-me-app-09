@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MessageCircle, X, Send, Volume2, VolumeX, Loader2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MessageCircle, X, Send, Volume2, VolumeX, Loader2, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { chatbotMessageSchema } from '@/lib/validation';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -92,7 +93,18 @@ export function EnhancedChatbot() {
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage = input.trim();
+    // Validate input
+    const validation = chatbotMessageSchema.safeParse({ message: input.trim() });
+    if (!validation.success) {
+      toast({
+        title: 'Error',
+        description: validation.error.errors[0].message,
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const userMessage = validation.data.message;
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
@@ -139,30 +151,37 @@ export function EnhancedChatbot() {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button - Separated from other action buttons */}
       <Button
-        className="fixed bottom-24 right-4 md:bottom-8 h-14 w-14 rounded-full shadow-lg z-50"
+        className="fixed bottom-24 left-4 md:bottom-8 h-14 w-14 rounded-full shadow-lg z-40 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
         onClick={() => setIsOpen(!isOpen)}
       >
-        {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+        {isOpen ? <X className="h-6 w-6" /> : <Bot className="h-6 w-6" />}
       </Button>
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-40 right-4 md:bottom-24 w-80 md:w-96 h-[500px] flex flex-col z-50 shadow-xl">
-          <CardHeader className="pb-2 flex-shrink-0">
+        <Card className="fixed bottom-40 left-4 md:bottom-24 w-[calc(100%-2rem)] md:w-96 h-[500px] flex flex-col z-40 shadow-xl border-2">
+          <CardHeader className="pb-2 flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Avatar className="h-8 w-8 bg-primary">
-                  <AvatarFallback>AI</AvatarFallback>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border-2 border-white">
+                  <AvatarFallback className="bg-white text-indigo-600 font-bold">
+                    <Bot className="h-5 w-5" />
+                  </AvatarFallback>
                 </Avatar>
-                Parivartan Assistant
-              </CardTitle>
+                <div>
+                  <CardTitle className="text-base">Parivartan Assistant</CardTitle>
+                  <p className="text-xs text-white/80">
+                    {isLoading ? 'Typing...' : 'Online'}
+                  </p>
+                </div>
+              </div>
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 text-white hover:bg-white/20"
                   onClick={() => {
                     if (isSpeaking) {
                       stopSpeaking();
@@ -172,6 +191,14 @@ export function EnhancedChatbot() {
                 >
                   {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white hover:bg-white/20"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -179,9 +206,28 @@ export function EnhancedChatbot() {
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
               <div className="space-y-4">
                 {messages.length === 0 && (
-                  <div className="text-center text-muted-foreground py-8">
-                    <p className="text-sm">👋 Hi! I'm your Parivartan assistant.</p>
-                    <p className="text-xs mt-2">Ask me anything about the app!</p>
+                  <div className="text-center py-8">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100 mb-4">
+                      <Bot className="h-8 w-8 text-indigo-600" />
+                    </div>
+                    <p className="font-medium text-foreground">Hi! I'm your Parivartan Assistant</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Ask me anything about the app!
+                    </p>
+                    <div className="mt-4 space-y-2">
+                      <p className="text-xs text-muted-foreground">Try asking:</p>
+                      {['How do I create a post?', 'What is AI Studio?', 'How to donate?'].map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => {
+                            setInput(q);
+                          }}
+                          className="block w-full text-left text-sm px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {messages.map((msg, idx) => (
@@ -190,10 +236,10 @@ export function EnhancedChatbot() {
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                      className={`max-w-[85%] rounded-2xl px-4 py-2 ${
                         msg.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
+                          ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-md'
+                          : 'bg-muted rounded-bl-md'
                       }`}
                     >
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -202,14 +248,18 @@ export function EnhancedChatbot() {
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg px-3 py-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                    <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             </ScrollArea>
-            <div className="p-4 border-t flex-shrink-0">
+            <div className="p-4 border-t flex-shrink-0 bg-background">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -222,9 +272,14 @@ export function EnhancedChatbot() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your message..."
                   disabled={isLoading}
-                  className="flex-1"
+                  className="flex-1 rounded-full"
                 />
-                <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+                <Button 
+                  type="submit" 
+                  size="icon" 
+                  className="rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                  disabled={isLoading || !input.trim()}
+                >
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
