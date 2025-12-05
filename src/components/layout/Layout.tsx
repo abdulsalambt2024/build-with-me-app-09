@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { BottomNavigation } from './BottomNavigation';
 import { HamburgerMenu } from './HamburgerMenu';
@@ -10,6 +11,10 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  
+  // Only show chatbot on home page
+  const showChatbot = location.pathname === '/';
 
   return (
     <div className="min-h-screen bg-background">
@@ -21,7 +26,7 @@ export function Layout({ children }: LayoutProps) {
       </main>
       
       <BottomNavigation />
-      <EnhancedChatbot />
+      {showChatbot && <EnhancedChatbot />}
     </div>
   );
 }

@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Plus, MessageCircle, ArrowLeft, Send, Check, CheckCheck } from 'lucide-react';
+import { Search, Plus, MessageCircle, ArrowLeft, Send, Check, CheckCheck, Image as ImageIcon, Paperclip, Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { format } from 'date-fns';
 import { chatMessageSchema } from '@/lib/validation';
+import { toast as sonnerToast } from 'sonner';
 
 interface User {
   user_id: string;
@@ -25,6 +26,8 @@ interface Message {
   content: string;
   user_id: string;
   created_at: string;
+  media_url?: string | null;
+  message_type?: string;
   user?: {
     full_name: string;
     avatar_url: string | null;
@@ -347,6 +350,25 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
                         : 'bg-muted rounded-bl-md'
                     }`}
                   >
+                    {msg.media_url && msg.message_type === 'image' && (
+                      <img 
+                        src={msg.media_url} 
+                        alt="Shared" 
+                        className="rounded-lg max-w-full mb-2 cursor-pointer hover:opacity-90"
+                        onClick={() => window.open(msg.media_url!, '_blank')}
+                      />
+                    )}
+                    {msg.media_url && msg.message_type === 'document' && (
+                      <a 
+                        href={msg.media_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 bg-background/20 rounded mb-2 hover:bg-background/30"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                        <span className="text-xs">Download</span>
+                      </a>
+                    )}
                     <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                     <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                       <span className="text-[10px] opacity-70">
@@ -364,28 +386,124 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
         </ScrollArea>
 
         {/* Message Input */}
-        <div className="p-4 border-t flex-shrink-0">
+        <div className="p-3 border-t flex-shrink-0 flex items-center gap-2">
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            id="private-image-upload"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file || !selectedRoom) return;
+              
+              try {
+                const fileName = `${Date.now()}-${file.name}`;
+                const { error: uploadError } = await supabase.storage
+                  .from('chat-media')
+                  .upload(fileName, file);
+                
+                if (uploadError) throw uploadError;
+                
+                const { data: urlData } = supabase.storage
+                  .from('chat-media')
+                  .getPublicUrl(fileName);
+                
+                await supabase.from('messages').insert({
+                  room_id: selectedRoom,
+                  user_id: user?.id,
+                  content: '📷 Image',
+                  media_url: urlData.publicUrl,
+                  message_type: 'image'
+                });
+                
+                queryClient.invalidateQueries({ queryKey: ['private-messages', selectedRoom] });
+                sonnerToast.success('Image sent');
+              } catch (error) {
+                sonnerToast.error('Failed to upload image');
+              }
+            }}
+          />
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            className="text-muted-foreground"
+            onClick={() => document.getElementById('private-image-upload')?.click()}
+          >
+            <ImageIcon className="h-5 w-5" />
+          </Button>
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx,.txt"
+            className="hidden"
+            id="private-file-upload"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file || !selectedRoom) return;
+              
+              try {
+                const fileName = `${Date.now()}-${file.name}`;
+                const { error: uploadError } = await supabase.storage
+                  .from('chat-media')
+                  .upload(fileName, file);
+                
+                if (uploadError) throw uploadError;
+                
+                const { data: urlData } = supabase.storage
+                  .from('chat-media')
+                  .getPublicUrl(fileName);
+                
+                await supabase.from('messages').insert({
+                  room_id: selectedRoom,
+                  user_id: user?.id,
+                  content: `📎 ${file.name}`,
+                  media_url: urlData.publicUrl,
+                  message_type: 'document'
+                });
+                
+                queryClient.invalidateQueries({ queryKey: ['private-messages', selectedRoom] });
+                sonnerToast.success('File sent');
+              } catch (error) {
+                sonnerToast.error('Failed to upload file');
+              }
+            }}
+          />
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            className="text-muted-foreground"
+            onClick={() => document.getElementById('private-file-upload')?.click()}
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="flex gap-2"
+            className="flex-1 flex gap-2"
           >
             <Input
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 rounded-full"
+              className="flex-1 rounded-full bg-muted border-0"
             />
-            <Button
-              type="submit"
-              size="icon"
-              className="rounded-full"
-              disabled={sendMessageMutation.isPending || !message.trim()}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+            {message.trim() ? (
+              <Button
+                type="submit"
+                size="icon"
+                className="rounded-full"
+                disabled={sendMessageMutation.isPending}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
+                <Mic className="h-5 w-5" />
+              </Button>
+            )}
           </form>
         </div>
       </Card>
@@ -400,8 +518,9 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
           <CardTitle className="text-lg">Private Messages</CardTitle>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="rounded-full">
+              <Button size="sm" variant="default" className="gap-1">
                 <Plus className="h-4 w-4" />
+                New Chat
               </Button>
             </DialogTrigger>
             <DialogContent>
