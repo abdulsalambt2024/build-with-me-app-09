@@ -24,6 +24,7 @@ interface Message {
   user_id: string;
   created_at: string;
   media_url: string | null;
+  message_type: string | null;
   is_deleted: boolean;
   is_pinned: boolean;
   reply_to_message_id: string | null;
@@ -274,6 +275,25 @@ export function UnifiedGroupChat() {
                         </div>
                       )}
                       
+                      {msg.media_url && msg.message_type === 'image' && (
+                        <img 
+                          src={msg.media_url} 
+                          alt="Shared" 
+                          className="rounded-lg max-w-full mb-2 cursor-pointer hover:opacity-90"
+                          onClick={() => window.open(msg.media_url!, '_blank')}
+                        />
+                      )}
+                      {msg.media_url && msg.message_type === 'document' && (
+                        <a 
+                          href={msg.media_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-2 bg-muted/50 rounded mb-2 hover:bg-muted"
+                        >
+                          <Paperclip className="h-4 w-4" />
+                          <span className="text-xs">Download attachment</span>
+                        </a>
+                      )}
                       <p className="text-sm break-words">{msg.content}</p>
                       
                       <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : ''}`}>
@@ -339,10 +359,94 @@ export function UnifiedGroupChat() {
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-3 bg-background border-t flex items-center gap-2">
-        <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          id="group-image-upload"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            
+            try {
+              const fileName = `${Date.now()}-${file.name}`;
+              const { error: uploadError } = await supabase.storage
+                .from('chat-media')
+                .upload(fileName, file);
+              
+              if (uploadError) throw uploadError;
+              
+              const { data: urlData } = supabase.storage
+                .from('chat-media')
+                .getPublicUrl(fileName);
+              
+              await supabase.from('messages').insert({
+                room_id: UNIFIED_ROOM_ID,
+                user_id: user?.id,
+                content: '📷 Image',
+                media_url: urlData.publicUrl,
+                message_type: 'image'
+              });
+              
+              queryClient.invalidateQueries({ queryKey: ['unified-chat-messages'] });
+              toast.success('Image sent');
+            } catch (error) {
+              toast.error('Failed to upload image');
+            }
+          }}
+        />
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="icon" 
+          className="text-muted-foreground"
+          onClick={() => document.getElementById('group-image-upload')?.click()}
+        >
           <ImageIcon className="h-5 w-5" />
         </Button>
-        <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
+        <input
+          type="file"
+          accept=".pdf,.doc,.docx,.txt"
+          className="hidden"
+          id="group-file-upload"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            
+            try {
+              const fileName = `${Date.now()}-${file.name}`;
+              const { error: uploadError } = await supabase.storage
+                .from('chat-media')
+                .upload(fileName, file);
+              
+              if (uploadError) throw uploadError;
+              
+              const { data: urlData } = supabase.storage
+                .from('chat-media')
+                .getPublicUrl(fileName);
+              
+              await supabase.from('messages').insert({
+                room_id: UNIFIED_ROOM_ID,
+                user_id: user?.id,
+                content: `📎 ${file.name}`,
+                media_url: urlData.publicUrl,
+                message_type: 'document'
+              });
+              
+              queryClient.invalidateQueries({ queryKey: ['unified-chat-messages'] });
+              toast.success('File sent');
+            } catch (error) {
+              toast.error('Failed to upload file');
+            }
+          }}
+        />
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="icon" 
+          className="text-muted-foreground"
+          onClick={() => document.getElementById('group-file-upload')?.click()}
+        >
           <Paperclip className="h-5 w-5" />
         </Button>
         <Input

@@ -151,9 +151,9 @@ export function EnhancedChatbot() {
 
   return (
     <>
-      {/* Floating Button - Separated from other action buttons */}
+      {/* Floating Button - Bottom right corner */}
       <Button
-        className="fixed bottom-24 left-4 md:bottom-8 h-14 w-14 rounded-full shadow-lg z-40 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+        className="fixed bottom-24 right-4 md:bottom-8 h-14 w-14 rounded-full shadow-lg z-40 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X className="h-6 w-6" /> : <Bot className="h-6 w-6" />}
@@ -161,7 +161,7 @@ export function EnhancedChatbot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-40 left-4 md:bottom-24 w-[calc(100%-2rem)] md:w-96 h-[500px] flex flex-col z-40 shadow-xl border-2">
+        <Card className="fixed bottom-40 right-4 md:bottom-24 w-[calc(100%-2rem)] md:w-96 h-[500px] flex flex-col z-40 shadow-xl border-2">
           <CardHeader className="pb-2 flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
