@@ -84,7 +84,7 @@ export default function Profile() {
                   <CardTitle className="text-2xl">
                     {profile?.full_name || user.email}
                   </CardTitle>
-                  <VerifiedBadge userId={user?.id} role={role} />
+                  <VerifiedBadge userId={user?.id || ''} />
                 </div>
                 <CardDescription className="flex items-center gap-2 mt-1">
                   <Mail className="h-4 w-4" />

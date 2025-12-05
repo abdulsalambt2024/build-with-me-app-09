@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,8 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Plus, MessageCircle } from 'lucide-react';
+import { Search, Plus, MessageCircle, ArrowLeft, Send, Check, CheckCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { format } from 'date-fns';
+import { chatMessageSchema } from '@/lib/validation';
 
 interface User {
   user_id: string;
@@ -17,8 +20,19 @@ interface User {
   avatar_url: string | null;
 }
 
+interface Message {
+  id: string;
+  content: string;
+  user_id: string;
+  created_at: string;
+  user?: {
+    full_name: string;
+    avatar_url: string | null;
+  };
+}
+
 interface PrivateChatProps {
-  onSelectRoom: (roomId: string) => void;
+  onSelectRoom?: (roomId: string) => void;
 }
 
 export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
@@ -27,11 +41,15 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [message, setMessage] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Only members, admins, super_admins can use chat
   const canChat = role !== 'viewer';
 
-  const { data: privateChats } = useQuery({
+  const { data: privateChats, isLoading: chatsLoading } = useQuery({
     queryKey: ['private-chats'],
     queryFn: async () => {
       if (!user) return [];
@@ -66,17 +84,77 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
         const otherUser = profileMap.get(otherUserId);
         return {
           ...room,
-          otherUser
+          otherUser,
+          otherUserId
         };
       }) || [];
     },
     enabled: canChat && !!user
   });
 
+  // Fetch messages for selected room
+  const { data: messages } = useQuery({
+    queryKey: ['private-messages', selectedRoom],
+    queryFn: async () => {
+      if (!selectedRoom) return [];
+
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('room_id', selectedRoom)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const userIds = [...new Set(data.map(m => m.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', userIds);
+
+      return data.map(msg => ({
+        ...msg,
+        user: profiles?.find(p => p.user_id === msg.user_id)
+      })) as Message[];
+    },
+    enabled: !!selectedRoom
+  });
+
+  // Real-time subscription for messages
+  useEffect(() => {
+    if (!selectedRoom) return;
+
+    const channel = supabase
+      .channel(`private-messages-${selectedRoom}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `room_id=eq.${selectedRoom}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['private-messages', selectedRoom] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedRoom, queryClient]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   const { data: allUsers } = useQuery({
     queryKey: ['all-users-for-chat'],
     queryFn: async () => {
-      // Get users who are not viewers
       const { data: roles } = await supabase
         .from('user_roles')
         .select('user_id')
@@ -117,7 +195,6 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
         return existingRoom.id;
       }
 
-      // Create new private chat
       const { data: room, error: roomError } = await supabase
         .from('chat_rooms')
         .insert({
@@ -130,7 +207,6 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
 
       if (roomError) throw roomError;
 
-      // Add participants
       const { error: participantsError } = await supabase
         .from('chat_participants')
         .insert([
@@ -145,7 +221,7 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
     onSuccess: (roomId) => {
       queryClient.invalidateQueries({ queryKey: ['private-chats'] });
       setDialogOpen(false);
-      onSelectRoom(roomId);
+      handleSelectRoom(roomId);
       toast({ title: 'Chat created', description: 'Start your conversation!' });
     },
     onError: () => {
@@ -153,13 +229,69 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
     }
   });
 
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!selectedRoom || !user) throw new Error('No room selected');
+
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          room_id: selectedRoom,
+          user_id: user.id,
+          content,
+          message_type: 'text'
+        });
+
+      if (error) throw error;
+
+      await supabase
+        .from('chat_rooms')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', selectedRoom);
+    },
+    onSuccess: () => {
+      setMessage('');
+      queryClient.invalidateQueries({ queryKey: ['private-messages', selectedRoom] });
+      queryClient.invalidateQueries({ queryKey: ['private-chats'] });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
+    }
+  });
+
+  const handleSelectRoom = (roomId: string) => {
+    const chat = privateChats?.find(c => c.id === roomId);
+    if (chat?.otherUser) {
+      setSelectedUser(chat.otherUser);
+    }
+    setSelectedRoom(roomId);
+    onSelectRoom?.(roomId);
+  };
+
+  const handleSendMessage = () => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
+    const validation = chatMessageSchema.safeParse({ content: trimmed });
+    if (!validation.success) {
+      toast({ 
+        title: 'Error', 
+        description: validation.error.errors[0].message, 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    sendMessageMutation.mutate(trimmed);
+  };
+
   const filteredUsers = allUsers?.filter(u => 
     u.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (!canChat) {
     return (
-      <Card>
+      <Card className="h-full">
         <CardContent className="py-8 text-center text-muted-foreground">
           Chat is only available for Members, Admins, and Super Admins.
         </CardContent>
@@ -167,15 +299,109 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
     );
   }
 
+  // Chat room view
+  if (selectedRoom && selectedUser) {
+    return (
+      <Card className="h-full flex flex-col">
+        {/* Chat Header */}
+        <CardHeader className="pb-2 border-b flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setSelectedRoom(null);
+                setSelectedUser(null);
+              }}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={selectedUser.avatar_url || undefined} />
+              <AvatarFallback>{selectedUser.full_name?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="flex items-center gap-1">
+                <span className="font-semibold">{selectedUser.full_name}</span>
+                <VerifiedBadge userId={selectedUser.user_id} size="sm" />
+              </div>
+              <span className="text-xs text-muted-foreground">Online</span>
+            </div>
+          </div>
+        </CardHeader>
+
+        {/* Messages */}
+        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+          <div className="space-y-3">
+            {messages?.map((msg) => {
+              const isMe = msg.user_id === user?.id;
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+                      isMe
+                        ? 'bg-primary text-primary-foreground rounded-br-md'
+                        : 'bg-muted rounded-bl-md'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                    <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <span className="text-[10px] opacity-70">
+                        {format(new Date(msg.created_at), 'HH:mm')}
+                      </span>
+                      {isMe && (
+                        <CheckCheck className="h-3 w-3 opacity-70" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+
+        {/* Message Input */}
+        <div className="p-4 border-t flex-shrink-0">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            className="flex gap-2"
+          >
+            <Input
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1 rounded-full"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              className="rounded-full"
+              disabled={sendMessageMutation.isPending || !message.trim()}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
+      </Card>
+    );
+  }
+
+  // Chat list view
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-2 border-b flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Private Messages</CardTitle>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" /> New Chat
+              <Button size="sm" className="rounded-full">
+                <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -193,20 +419,23 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
                   />
                 </div>
                 <ScrollArea className="h-64">
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {filteredUsers?.map((u) => (
                       <Button
                         key={u.user_id}
                         variant="ghost"
-                        className="w-full justify-start gap-3"
+                        className="w-full justify-start gap-3 h-14"
                         onClick={() => createPrivateChat.mutate(u.user_id)}
                         disabled={createPrivateChat.isPending}
                       >
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-10 w-10">
                           <AvatarImage src={u.avatar_url || undefined} />
                           <AvatarFallback>{u.full_name?.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <span>{u.full_name}</span>
+                        <div className="flex items-center gap-1">
+                          <span>{u.full_name}</span>
+                          <VerifiedBadge userId={u.user_id} size="sm" />
+                        </div>
                       </Button>
                     ))}
                     {filteredUsers?.length === 0 && (
@@ -219,27 +448,36 @@ export function PrivateChat({ onSelectRoom }: PrivateChatProps) {
           </Dialog>
         </div>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-48">
-          <div className="space-y-2">
+      <CardContent className="flex-1 overflow-hidden p-0">
+        <ScrollArea className="h-full">
+          <div className="divide-y">
             {privateChats?.map((chat) => (
-              <Button
+              <button
                 key={chat.id}
-                variant="ghost"
-                className="w-full justify-start gap-3"
-                onClick={() => onSelectRoom(chat.id)}
+                className="w-full p-4 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
+                onClick={() => handleSelectRoom(chat.id)}
               >
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-12 w-12">
                   <AvatarImage src={chat.otherUser?.avatar_url || undefined} />
                   <AvatarFallback>{chat.otherUser?.full_name?.charAt(0) || '?'}</AvatarFallback>
                 </Avatar>
-                <span className="truncate">{chat.otherUser?.full_name || 'Unknown'}</span>
-              </Button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium truncate">{chat.otherUser?.full_name || 'Unknown'}</span>
+                    {chat.otherUserId && <VerifiedBadge userId={chat.otherUserId} size="sm" />}
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">Tap to chat</p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(chat.updated_at), 'HH:mm')}
+                </span>
+              </button>
             ))}
             {(!privateChats || privateChats.length === 0) && (
-              <div className="text-center text-muted-foreground py-4">
-                <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No private chats yet</p>
+              <div className="text-center text-muted-foreground py-12">
+                <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">No conversations yet</p>
+                <p className="text-sm">Start a new chat to connect with others</p>
               </div>
             )}
           </div>
