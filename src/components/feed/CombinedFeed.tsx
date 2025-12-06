@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageCircle, Trophy, Megaphone, Calendar, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Trophy, Megaphone, Calendar, MoreVertical, Pencil, Trash2, Share2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 
 interface FeedItem {
   id: string;
@@ -33,6 +33,7 @@ export function CombinedFeed() {
   const { toast } = useToast();
   const canEdit = role !== 'viewer';
   const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin' || role === 'super_admin';
 
   const { data: feedItems, isLoading, refetch } = useQuery({
     queryKey: ['combined-feed'],
@@ -110,7 +111,7 @@ export function CombinedFeed() {
   });
 
   const handleDelete = async (item: FeedItem) => {
-    const canDelete = item.user_id === user?.id || isSuperAdmin || (role === 'admin' && item.type !== 'event');
+    const canDelete = item.user_id === user?.id || isSuperAdmin || (isAdmin && ['post', 'announcement'].includes(item.type));
     if (!canDelete) return;
 
     let error;
@@ -139,39 +140,46 @@ export function CombinedFeed() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'post': return <MessageCircle className="h-4 w-4" />;
-      case 'achievement': return <Trophy className="h-4 w-4" />;
-      case 'announcement': return <Megaphone className="h-4 w-4" />;
-      case 'event': return <Calendar className="h-4 w-4" />;
+      case 'post': return <MessageCircle className="h-3 w-3" />;
+      case 'achievement': return <Trophy className="h-3 w-3" />;
+      case 'announcement': return <Megaphone className="h-3 w-3" />;
+      case 'event': return <Calendar className="h-3 w-3" />;
       default: return null;
     }
   };
 
   const getTypeBadge = (type: string, priority?: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      post: 'secondary',
-      achievement: 'default',
-      announcement: priority === 'high' ? 'destructive' : 'outline',
-      event: 'default'
+    const colors: Record<string, string> = {
+      post: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+      achievement: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+      announcement: priority === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+      event: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
     };
     return (
-      <Badge variant={variants[type]} className="gap-1">
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colors[type]}`}>
         {getTypeIcon(type)}
         {type.charAt(0).toUpperCase() + type.slice(1)}
-      </Badge>
+      </span>
     );
   };
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
+        {[...Array(3)].map((_, i) => (
           <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-12 w-full" />
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="space-y-1.5">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-3/4" />
             </CardContent>
           </Card>
         ))}
@@ -182,25 +190,30 @@ export function CombinedFeed() {
   return (
     <div className="space-y-4">
       {feedItems?.map((item) => {
-        const canModify = item.user_id === user?.id || isSuperAdmin || (role === 'admin' && item.type !== 'event');
+        const canModify = item.user_id === user?.id || isSuperAdmin || (isAdmin && ['post', 'announcement'].includes(item.type));
         
         return (
-          <Card key={`${item.type}-${item.id}`} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar>
+          <Card key={`${item.type}-${item.id}`} className="overflow-hidden hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
                     <AvatarImage src={item.avatar_url || undefined} />
-                    <AvatarFallback>{item.user_name?.charAt(0) || '?'}</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                      {item.user_name?.charAt(0) || '?'}
+                    </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-semibold">{item.user_name}</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-sm truncate">{item.user_name}</p>
+                      <VerifiedBadge userId={item.user_id} size="sm" />
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   {getTypeBadge(item.type, item.priority)}
                   {canEdit && canModify && (
                     <DropdownMenu>
@@ -210,14 +223,14 @@ export function CombinedFeed() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Pencil className="h-4 w-4 mr-2" /> Edit
+                        <DropdownMenuItem className="gap-2">
+                          <Pencil className="h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          className="text-destructive"
+                          className="text-destructive gap-2"
                           onClick={() => handleDelete(item)}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" /> Delete
+                          <Trash2 className="h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -225,36 +238,53 @@ export function CombinedFeed() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <h3 className="font-semibold text-lg">{item.title}</h3>
-              <p className="text-muted-foreground line-clamp-3">{item.content}</p>
+            <CardContent className="space-y-3 px-4 pb-4">
+              <h3 className="font-semibold">{item.title}</h3>
+              <p className="text-sm text-muted-foreground line-clamp-3">{item.content}</p>
               
               {item.media_urls && item.media_urls.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className={`grid gap-2 ${item.media_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   {item.media_urls.slice(0, 4).map((url, idx) => (
-                    <img 
-                      key={idx} 
-                      src={url} 
-                      alt="" 
-                      className="rounded-lg object-cover aspect-video w-full"
-                    />
+                    <div key={idx} className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+                      <img 
+                        src={url} 
+                        alt="" 
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      {item.media_urls!.length > 4 && idx === 3 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="text-white font-bold text-lg">+{item.media_urls!.length - 4}</span>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
 
               {item.event_date && (
-                <p className="text-sm text-primary font-medium">
-                  📅 {new Date(item.event_date).toLocaleDateString()}
-                </p>
+                <div className="flex items-center gap-2 text-sm text-primary font-medium bg-primary/5 px-3 py-2 rounded-lg">
+                  <Calendar className="h-4 w-4" />
+                  {new Date(item.event_date).toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
               )}
 
               {item.type === 'post' && (
-                <div className="flex items-center gap-4 pt-2 border-t">
-                  <Button variant="ghost" size="sm" className="gap-1">
+                <div className="flex items-center gap-1 pt-2 border-t">
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-red-500">
                     <Heart className="h-4 w-4" /> {item.likes_count || 0}
                   </Button>
-                  <Button variant="ghost" size="sm" className="gap-1">
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
                     <MessageCircle className="h-4 w-4" /> {item.comments_count || 0}
+                  </Button>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground ml-auto">
+                    <Share2 className="h-4 w-4" />
                   </Button>
                 </div>
               )}
@@ -265,8 +295,9 @@ export function CombinedFeed() {
 
       {(!feedItems || feedItems.length === 0) && (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            No content yet. Be the first to post!
+          <CardContent className="py-12 text-center">
+            <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-muted-foreground">No content yet. Be the first to post!</p>
           </CardContent>
         </Card>
       )}
