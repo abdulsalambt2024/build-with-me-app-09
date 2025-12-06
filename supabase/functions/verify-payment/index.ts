@@ -46,19 +46,20 @@ serve(async (req) => {
       );
     }
 
-    // If user confirmed payment manually (fallback for UPI without webhooks)
+    // If user confirmed payment manually (UPI without webhooks)
+    // Set to pending_verification - requires admin approval
     if (user_confirmed && transaction.status === 'pending') {
       const supabaseAdmin = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
 
-      // Update to success (admin review required)
+      // Update to pending_verification instead of success
       const { error: updateError } = await supabaseAdmin
         .from('payment_transactions')
         .update({
-          status: 'success',
-          verified_at: new Date().toISOString(),
+          status: 'pending_verification',
+          verification_status: 'pending_admin_review',
           updated_at: new Date().toISOString(),
         })
         .eq('id', transaction.id);
@@ -66,56 +67,17 @@ serve(async (req) => {
       if (updateError) {
         console.error('Error updating transaction:', updateError);
         return new Response(
-          JSON.stringify({ error: 'Failed to verify payment' }),
+          JSON.stringify({ error: 'Failed to update payment status' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      // Create donation record
-      const donorName = transaction.gateway_response?.donor_name || 'Anonymous';
-      const isAnonymous = transaction.gateway_response?.is_anonymous || false;
-      const message = transaction.gateway_response?.message || null;
-
-      const { data: donationData, error: donationError } = await supabaseAdmin
-        .from('donations')
-        .insert({
-          campaign_id: transaction.campaign_id,
-          user_id: transaction.user_id,
-          amount: transaction.amount,
-          donor_name: donorName,
-          is_anonymous: isAnonymous,
-          message,
-          payment_method: transaction.payment_gateway,
-          payment_id: transaction.payment_id,
-        })
-        .select()
-        .single();
-
-      if (donationError) {
-        console.error('Error creating donation:', donationError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to create donation' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Update transaction with donation_id
-      await supabaseAdmin
-        .from('payment_transactions')
-        .update({ donation_id: donationData.id })
-        .eq('id', transaction.id);
-
-      // Generate receipt
-      const receiptNumber = `RCP-${Date.now()}-${donationData.id.substring(0, 8)}`;
-      await supabaseAdmin
-        .from('donation_receipts')
-        .insert({
-          donation_id: donationData.id,
-          receipt_number: receiptNumber,
-        });
 
       return new Response(
-        JSON.stringify({ success: true, status: 'success', donation_id: donationData.id }),
+        JSON.stringify({ 
+          success: true, 
+          status: 'pending_verification',
+          message: 'Payment submitted for admin verification. You will be notified once approved.'
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

@@ -1327,6 +1327,7 @@ export type Database = {
       }
       verification_badges: {
         Row: {
+          badge_color: string | null
           badge_type: string
           granted_at: string | null
           granted_by: string
@@ -1334,6 +1335,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          badge_color?: string | null
           badge_type?: string
           granted_at?: string | null
           granted_by: string
@@ -1341,6 +1343,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          badge_color?: string | null
           badge_type?: string
           granted_at?: string | null
           granted_by?: string
@@ -1376,6 +1379,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_room_participant: {
+        Args: { _room_id: string; _user_id: string }
         Returns: boolean
       }
     }
