@@ -138,7 +138,7 @@ export default function Home() {
         {/* Community Feed */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Feed</h2>
+            <h2 className="font-semibold text-2xl">Feed</h2>
             {canCreate && <CreatePostDialog />}
           </div>
           <CombinedFeed />
