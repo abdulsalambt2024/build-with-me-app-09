@@ -55,7 +55,7 @@ export function Slideshow() {
       <div className="relative aspect-video w-full">
         <img src={slides[currentIndex].image_url} alt={slides[currentIndex].title} className="w-full h-full object-cover" />
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-          <h3 className="text-white font-bold mb-2 text-center font-serif text-2xl">
+          <h3 className="text-white font-bold mb-2 text-center font-serif text-lg">
             {slides[currentIndex].title}
           </h3>
           {slides[currentIndex].description && <p className="text-white/90 text-center font-serif text-xs">
