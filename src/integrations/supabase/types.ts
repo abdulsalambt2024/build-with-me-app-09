@@ -1058,6 +1058,7 @@ export type Database = {
           father_name: string | null
           full_name: string | null
           id: string
+          role: string | null
           roll_number: string | null
           semester: string | null
           updated_at: string
@@ -1074,6 +1075,7 @@ export type Database = {
           father_name?: string | null
           full_name?: string | null
           id?: string
+          role?: string | null
           roll_number?: string | null
           semester?: string | null
           updated_at?: string
@@ -1090,6 +1092,7 @@ export type Database = {
           father_name?: string | null
           full_name?: string | null
           id?: string
+          role?: string | null
           roll_number?: string | null
           semester?: string | null
           updated_at?: string

@@ -1,16 +1,24 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateCampaign } from '@/hooks/useDonations';
-import { Plus, Upload, Loader2 } from 'lucide-react';
+import { Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-export function CreateCampaignDialog() {
-  const [open, setOpen] = useState(false);
+interface CreateCampaignDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function CreateCampaignDialog({ open: controlledOpen, onOpenChange }: CreateCampaignDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
+  
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -33,18 +41,18 @@ export function CreateCampaignDialog() {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const { error: uploadError, data } = await supabase.storage
-        .from('event-banners')
+      const { error: uploadError } = await supabase.storage
+        .from('donation-posters')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('event-banners')
+        .from('donation-posters')
         .getPublicUrl(fileName);
 
       setFormData(prev => ({ ...prev, banner_url: publicUrl }));
-      toast.success('Banner uploaded successfully');
+      toast.success('Banner uploaded');
     } catch (error) {
       console.error('Error uploading banner:', error);
       toast.error('Failed to upload banner');
@@ -62,17 +70,17 @@ export function CreateCampaignDialog() {
       const fileExt = file.name.split('.').pop();
       const fileName = `qr-${Math.random()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
-        .from('event-banners')
+        .from('donation-posters')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('event-banners')
+        .from('donation-posters')
         .getPublicUrl(fileName);
 
       setFormData(prev => ({ ...prev, qr_code_url: publicUrl }));
-      toast.success('QR code uploaded successfully');
+      toast.success('QR code uploaded');
     } catch (error) {
       console.error('Error uploading QR:', error);
       toast.error('Failed to upload QR code');
@@ -100,7 +108,7 @@ export function CreateCampaignDialog() {
         status: 'active'
       });
 
-      toast.success('Campaign created successfully');
+      toast.success('Campaign created');
       setOpen(false);
       setFormData({
         title: '',
@@ -120,26 +128,21 @@ export function CreateCampaignDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="fixed bottom-20 right-6 rounded-full h-14 w-14 shadow-lg">
-          <Plus className="h-6 w-6" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Donation Campaign</DialogTitle>
+          <DialogTitle>Create Campaign</DialogTitle>
           <DialogDescription>
-            Create a new fundraising campaign for the community
+            Create a new fundraising campaign
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="title">Campaign Title *</Label>
+            <Label htmlFor="title">Title *</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Enter campaign title"
+              placeholder="Campaign title"
               required
             />
           </div>
@@ -151,14 +154,14 @@ export function CreateCampaignDialog() {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Describe your campaign..."
-              rows={4}
+              rows={3}
               required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="target">Target Amount (₹) *</Label>
+              <Label htmlFor="target">Target (₹) *</Label>
               <Input
                 id="target"
                 type="number"
@@ -175,70 +178,70 @@ export function CreateCampaignDialog() {
                 id="category"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                placeholder="Education, Health, etc."
+                placeholder="Education"
               />
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="end_date">End Date</Label>
-            <Input
-              id="end_date"
-              type="date"
-              value={formData.end_date}
-              onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="upi_id">UPI ID</Label>
-            <Input
-              id="upi_id"
-              value={formData.upi_id}
-              onChange={(e) => setFormData({ ...formData, upi_id: e.target.value })}
-              placeholder="example@upi"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="banner">Campaign Banner</Label>
-            <div className="flex items-center gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="end_date">End Date</Label>
               <Input
-                id="banner"
+                id="end_date"
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="upi_id">UPI ID</Label>
+              <Input
+                id="upi_id"
+                value={formData.upi_id}
+                onChange={(e) => setFormData({ ...formData, upi_id: e.target.value })}
+                placeholder="example@upi"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Banner</Label>
+              <Input
                 type="file"
                 accept="image/*"
                 onChange={handleBannerUpload}
                 disabled={uploading}
+                className="text-xs"
               />
               {formData.banner_url && (
-                <img src={formData.banner_url} alt="Preview" className="h-16 w-16 object-cover rounded" />
+                <img src={formData.banner_url} alt="Preview" className="h-12 mt-2 rounded" />
               )}
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="qr">Payment QR Code</Label>
-            <div className="flex items-center gap-4">
+            <div>
+              <Label>QR Code</Label>
               <Input
-                id="qr"
                 type="file"
                 accept="image/*"
                 onChange={handleQRUpload}
                 disabled={uploading}
+                className="text-xs"
               />
               {formData.qr_code_url && (
-                <img src={formData.qr_code_url} alt="QR Preview" className="h-16 w-16 object-cover rounded" />
+                <img src={formData.qr_code_url} alt="QR" className="h-12 mt-2 rounded" />
               )}
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={createCampaign.isPending || uploading}>
               {createCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Campaign
+              Create
             </Button>
           </DialogFooter>
         </form>

@@ -36,7 +36,8 @@ interface Message {
   read_status: { user_id: string; read_at: string }[];
 }
 
-const UNIFIED_ROOM_ID = 'unified-group-chat';
+// Well-known UUID for the community chat room
+const UNIFIED_ROOM_ID = '00000000-0000-0000-0000-000000000001';
 
 export function UnifiedGroupChat() {
   const { user, role } = useAuth();
