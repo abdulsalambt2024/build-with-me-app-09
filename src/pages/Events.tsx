@@ -28,11 +28,14 @@ export default function Events() {
 
   return (
     <div className="container max-w-7xl mx-auto p-4">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Events</h1>
-        <p className="text-muted-foreground">
-          Discover and join community events
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Events</h1>
+          <p className="text-muted-foreground">
+            Discover and join community events
+          </p>
+        </div>
+        {canCreateEvents && <CreateEventDialog />}
       </div>
 
       <Tabs defaultValue="upcoming" className="space-y-6">
@@ -75,8 +78,6 @@ export default function Events() {
           )}
         </TabsContent>
       </Tabs>
-
-      {canCreateEvents && <CreateEventDialog />}
     </div>
   );
 }

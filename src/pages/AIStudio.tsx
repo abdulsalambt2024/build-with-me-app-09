@@ -4,8 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useGenerateImage, useEnhanceImage, useAIUsage } from '@/hooks/useAIStudio';
-import { Wand2, Sparkles, Image as ImageIcon, Loader2, Download, ExternalLink, Palette } from 'lucide-react';
+import { useGenerateImage, useEnhanceImage, useAIUsage, useDeleteAIUsage } from '@/hooks/useAIStudio';
+import { Wand2, Sparkles, Image as ImageIcon, Loader2, Download, ExternalLink, Palette, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AIStudio() {
@@ -19,6 +19,7 @@ export default function AIStudio() {
   const { data: usage } = useAIUsage();
   const generateImage = useGenerateImage();
   const enhanceImage = useEnhanceImage();
+  const deleteAIUsage = useDeleteAIUsage();
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -373,7 +374,7 @@ export default function AIStudio() {
               {usage && usage.length > 0 ? (
                 <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {usage.map((item) => (
-                    <Card key={item.id} className="overflow-hidden">
+                    <Card key={item.id} className="overflow-hidden group relative">
                       <CardContent className="p-0">
                         {item.result_url && (
                           <img
@@ -389,20 +390,34 @@ export default function AIStudio() {
                           {item.prompt && (
                             <p className="text-sm mt-1 line-clamp-2">{item.prompt}</p>
                           )}
-                          {item.result_url && (
+                          <div className="flex gap-1 mt-2">
+                            {item.result_url && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="flex-1"
+                                onClick={() => {
+                                  setGeneratedImage(item.result_url);
+                                  handleDownload();
+                                }}
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                Download
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
-                              size="sm" 
-                              className="w-full mt-2"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
                               onClick={() => {
-                                setGeneratedImage(item.result_url);
-                                handleDownload();
+                                if (confirm('Delete this item?')) {
+                                  deleteAIUsage.mutate(item.id);
+                                }
                               }}
                             >
-                              <Download className="h-3 w-3 mr-1" />
-                              Download
+                              <Trash2 className="h-3 w-3" />
                             </Button>
-                          )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

@@ -76,3 +76,20 @@ export function useEnhanceImage() {
     },
   });
 }
+
+export function useDeleteAIUsage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('ai_usage')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-usage'] });
+    },
+  });
+}

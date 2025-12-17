@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 import { formatDistanceToNow } from 'date-fns';
 import { 
   CheckCircle, XCircle, Eye, Search, Filter, MessageCircle, Calendar, 
-  Megaphone, Trophy, AlertTriangle, Trash2, Shield, RefreshCw 
+  Megaphone, Trophy, AlertTriangle, Trash2, Shield, RefreshCw, Users, UserCheck
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -31,12 +32,45 @@ interface ContentItem {
   media_urls?: string[];
 }
 
+interface TeamMember {
+  user_id: string;
+  full_name: string;
+  avatar_url: string | null;
+  role: string;
+}
+
 export default function ContentModeration() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
+  // Fetch team members
+  const { data: teamMembers } = useQuery({
+    queryKey: ['team-members'],
+    queryFn: async () => {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('role', ['member', 'admin', 'super_admin']);
+
+      if (!roles) return [];
+
+      const userIds = roles.map(r => r.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', userIds);
+
+      return roles.map(r => ({
+        ...r,
+        full_name: profiles?.find(p => p.user_id === r.user_id)?.full_name || 'Unknown',
+        avatar_url: profiles?.find(p => p.user_id === r.user_id)?.avatar_url
+      })) as TeamMember[];
+    }
+  });
 
   const { data: posts, isLoading: postsLoading, refetch: refetchPosts } = useQuery({
     queryKey: ['admin-posts-moderation'],
@@ -155,9 +189,40 @@ export default function ContentModeration() {
       refetchEvents();
       refetchAnnouncements();
       setSelectedItem(null);
+      setSelectedItems(new Set());
     },
     onError: () => {
       toast({ title: 'Error', description: 'Failed to delete content.', variant: 'destructive' });
+    }
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (items: { type: string; id: string }[]) => {
+      for (const item of items) {
+        let error;
+        switch (item.type) {
+          case 'post':
+            ({ error } = await supabase.from('posts').delete().eq('id', item.id));
+            break;
+          case 'event':
+            ({ error } = await supabase.from('events').delete().eq('id', item.id));
+            break;
+          case 'announcement':
+            ({ error } = await supabase.from('announcements').delete().eq('id', item.id));
+            break;
+        }
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: 'Content removed', description: `${selectedItems.size} items deleted successfully.` });
+      refetchPosts();
+      refetchEvents();
+      refetchAnnouncements();
+      setSelectedItems(new Set());
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to delete some content.', variant: 'destructive' });
     }
   });
 
@@ -165,7 +230,8 @@ export default function ContentModeration() {
     if (!items) return [];
     return items.filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           item.content.toLowerCase().includes(searchQuery.toLowerCase());
+                           item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           item.user_name?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     });
   };
@@ -180,51 +246,82 @@ export default function ContentModeration() {
     }
   };
 
-  const ContentCard = ({ item }: { item: ContentItem }) => (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-4">
-          <Avatar className="h-10 w-10 flex-shrink-0">
-            <AvatarImage src={item.avatar_url || undefined} />
-            <AvatarFallback>{item.user_name?.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-sm truncate">{item.user_name}</span>
-              <VerifiedBadge userId={item.user_id} size="sm" />
-              <Badge variant="outline" className="gap-1 text-xs">
-                {getTypeIcon(item.type)}
-                {item.type}
-              </Badge>
+  const toggleSelection = (id: string, type: string) => {
+    const key = `${type}:${id}`;
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(key)) {
+      newSelected.delete(key);
+    } else {
+      newSelected.add(key);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleBulkDelete = () => {
+    if (!confirm(`Delete ${selectedItems.size} selected items?`)) return;
+    const items = Array.from(selectedItems).map(key => {
+      const [type, id] = key.split(':');
+      return { type, id };
+    });
+    bulkDeleteMutation.mutate(items);
+  };
+
+  const ContentCard = ({ item }: { item: ContentItem }) => {
+    const key = `${item.type}:${item.id}`;
+    const isSelected = selectedItems.has(key);
+    
+    return (
+      <Card className={`hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary' : ''}`}>
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => toggleSelection(item.id, item.type)}
+              className="mt-1"
+            />
+            <Avatar className="h-10 w-10 flex-shrink-0">
+              <AvatarImage src={item.avatar_url || undefined} />
+              <AvatarFallback>{item.user_name?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-medium text-sm truncate">{item.user_name}</span>
+                <VerifiedBadge userId={item.user_id} size="sm" />
+                <Badge variant="outline" className="gap-1 text-xs">
+                  {getTypeIcon(item.type)}
+                  {item.type}
+                </Badge>
+              </div>
+              <h4 className="font-semibold text-sm mb-1 truncate">{item.title}</h4>
+              <p className="text-xs text-muted-foreground line-clamp-2">{item.content}</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+              </p>
             </div>
-            <h4 className="font-semibold text-sm mb-1 truncate">{item.title}</h4>
-            <p className="text-xs text-muted-foreground line-clamp-2">{item.content}</p>
-            <p className="text-xs text-muted-foreground mt-2">
-              {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
-            </p>
+            <div className="flex flex-col gap-1 flex-shrink-0">
+              <Button variant="outline" size="sm" onClick={() => setSelectedItem(item)}>
+                <Eye className="h-3.5 w-3.5" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-destructive hover:text-destructive"
+                onClick={() => deleteMutation.mutate({ type: item.type, id: item.id })}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-col gap-1 flex-shrink-0">
-            <Button variant="outline" size="sm" onClick={() => setSelectedItem(item)}>
-              <Eye className="h-3.5 w-3.5" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-destructive hover:text-destructive"
-              onClick={() => deleteMutation.mutate({ type: item.type, id: item.id })}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   const stats = {
     posts: posts?.length || 0,
     events: events?.length || 0,
-    announcements: announcements?.length || 0
+    announcements: announcements?.length || 0,
+    teamMembers: teamMembers?.length || 0
   };
 
   return (
@@ -235,6 +332,17 @@ export default function ContentModeration() {
           <p className="text-sm text-muted-foreground">Review and moderate community content</p>
         </div>
         <div className="flex gap-2">
+          {selectedItems.size > 0 && (
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete ({selectedItems.size})
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => {
             refetchPosts();
             refetchEvents();
@@ -247,7 +355,7 @@ export default function ContentModeration() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
@@ -281,7 +389,43 @@ export default function ContentModeration() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900">
+              <Users className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+            </div>
+            <div>
+              <p className="text-lg font-bold">{stats.teamMembers}</p>
+              <p className="text-xs text-muted-foreground">Team</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Team Members Quick Access */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            Team Members
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {teamMembers?.map((member) => (
+              <div key={member.user_id} className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={member.avatar_url || undefined} />
+                  <AvatarFallback className="text-xs">{member.full_name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium">{member.full_name}</span>
+                <VerifiedBadge userId={member.user_id} size="sm" />
+                <Badge variant="outline" className="text-xs capitalize">{member.role.replace('_', ' ')}</Badge>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Search and Filter */}
       <Card>
@@ -290,7 +434,7 @@ export default function ContentModeration() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search content..."
+                placeholder="Search by title, content, or author..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -357,7 +501,7 @@ export default function ContentModeration() {
       <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Content Details</DialogTitle>
+            <DialogTitle>Content Preview</DialogTitle>
           </DialogHeader>
           {selectedItem && (
             <div className="space-y-4">
@@ -376,6 +520,10 @@ export default function ContentModeration() {
                   </p>
                 </div>
               </div>
+              <Badge variant="outline" className="gap-1">
+                {getTypeIcon(selectedItem.type)}
+                {selectedItem.type}
+              </Badge>
               <div>
                 <h3 className="font-semibold text-lg">{selectedItem.title}</h3>
                 <p className="text-muted-foreground mt-2 whitespace-pre-wrap">{selectedItem.content}</p>

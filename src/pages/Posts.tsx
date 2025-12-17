@@ -30,11 +30,14 @@ export default function Posts() {
 
   return (
     <div className="container max-w-4xl mx-auto p-4">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Posts</h1>
-        <p className="text-muted-foreground">
-          Share and discover community content
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Posts</h1>
+          <p className="text-muted-foreground">
+            Share and discover community content
+          </p>
+        </div>
+        {canCreatePosts && <CreatePostDialog />}
       </div>
 
       {posts && posts.length > 0 ? (
@@ -54,8 +57,6 @@ export default function Posts() {
           </p>
         </Card>
       )}
-
-      {canCreatePosts && <CreatePostDialog />}
     </div>
   );
 }
