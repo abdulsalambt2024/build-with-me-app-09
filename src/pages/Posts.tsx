@@ -11,10 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Search, SortAsc, SortDesc, Trophy, FileText, LayoutGrid } from 'lucide-react';
 import { format } from 'date-fns';
-
 type FilterType = 'all' | 'posts' | 'achievements';
 type SortType = 'newest' | 'oldest' | 'popular';
-
 interface FeedItem {
   id: string;
   type: 'post' | 'achievement';
@@ -31,19 +29,25 @@ interface FeedItem {
     avatar_url: string;
   } | null;
 }
-
 export default function Posts() {
   const [filter, setFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const itemsPerPage = 20;
-
-  const { data: posts, isLoading: postsLoading } = usePosts(100);
-  const { data: achievements, isLoading: achievementsLoading } = useAchievements();
+  const {
+    data: posts,
+    isLoading: postsLoading
+  } = usePosts(100);
+  const {
+    data: achievements,
+    isLoading: achievementsLoading
+  } = useAchievements();
   const deletePost = useDeletePost();
-  const { role, user } = useAuth();
-
+  const {
+    role,
+    user
+  } = useAuth();
   const canCreate = role && ['member', 'admin', 'super_admin'].includes(role);
   const isLoading = postsLoading || achievementsLoading;
 
@@ -90,11 +94,7 @@ export default function Posts() {
     let filtered = items;
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = items.filter(item =>
-        item.title.toLowerCase().includes(query) ||
-        item.content.toLowerCase().includes(query) ||
-        item.profiles?.full_name?.toLowerCase().includes(query)
-      );
+      filtered = items.filter(item => item.title.toLowerCase().includes(query) || item.content.toLowerCase().includes(query) || item.profiles?.full_name?.toLowerCase().includes(query));
     }
 
     // Sort items
@@ -108,7 +108,6 @@ export default function Posts() {
       }
       return 0;
     });
-
     return filtered;
   }, [posts, achievements, filter, sortBy, searchQuery]);
 
@@ -118,32 +117,25 @@ export default function Posts() {
     const end = page * itemsPerPage;
     return feedItems.slice(start, end);
   }, [feedItems, page]);
-
   const hasMore = paginatedItems.length < feedItems.length;
-
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this?')) {
       await deletePost.mutateAsync(id);
     }
   };
-
   if (isLoading) {
-    return (
-      <div className="container max-w-4xl mx-auto p-4">
+    return <div className="container max-w-4xl mx-auto p-4">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="container max-w-4xl mx-auto p-4 space-y-4">
+  return <div className="container max-w-4xl mx-auto p-4 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Feed</h1>
-          <p className="text-sm text-muted-foreground">
+          
+          <p className="font-bold text-lg text-white">
             Posts & Achievements
           </p>
         </div>
@@ -156,16 +148,11 @@ export default function Posts() {
           {/* Search */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search posts & achievements..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+            <Input placeholder="Search posts & achievements..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
           </div>
 
           {/* Sort */}
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortType)}>
+          <Select value={sortBy} onValueChange={v => setSortBy(v as SortType)}>
             <SelectTrigger className="w-full sm:w-[140px]">
               <SelectValue />
             </SelectTrigger>
@@ -190,7 +177,7 @@ export default function Posts() {
         </div>
 
         {/* Filter Tabs */}
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="mt-3">
+        <Tabs value={filter} onValueChange={v => setFilter(v as FilterType)} className="mt-3">
           <TabsList className="w-full grid grid-cols-3">
             <TabsTrigger value="all" className="gap-1 text-xs sm:text-sm">
               <LayoutGrid className="h-3 w-3" />
@@ -214,32 +201,22 @@ export default function Posts() {
       </p>
 
       {/* Feed Items */}
-      {paginatedItems.length > 0 ? (
-        <div className="space-y-4">
-          {paginatedItems.map((item) => (
-            <Card key={`${item.type}-${item.id}`} className="overflow-hidden">
-              {item.type === 'achievement' ? (
-                // Achievement Card
-                <div className="p-4">
+      {paginatedItems.length > 0 ? <div className="space-y-4">
+          {paginatedItems.map(item => <Card key={`${item.type}-${item.id}`} className="overflow-hidden">
+              {item.type === 'achievement' ?
+        // Achievement Card
+        <div className="p-4">
                   <div className="flex items-start gap-3">
-                    {item.media_urls?.[0] && (
-                      <img
-                        src={item.media_urls[0]}
-                        alt={item.title}
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
-                    )}
+                    {item.media_urls?.[0] && <img src={item.media_urls[0]} alt={item.title} className="w-16 h-16 rounded-lg object-cover" />}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <Trophy className="h-4 w-4 text-amber-500" />
                         <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
                           Achievement
                         </span>
-                        {item.category && (
-                          <span className="text-xs text-muted-foreground capitalize">
+                        {item.category && <span className="text-xs text-muted-foreground capitalize">
                             • {item.category}
-                          </span>
-                        )}
+                          </span>}
                       </div>
                       <h3 className="font-semibold truncate">{item.title}</h3>
                       <p className="text-sm text-muted-foreground line-clamp-2">{item.content}</p>
@@ -250,46 +227,30 @@ export default function Posts() {
                       </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                // Post Card
-                <PostCard
-                  post={{
-                    id: item.id,
-                    user_id: item.user_id,
-                    title: item.title,
-                    content: item.content,
-                    media_urls: item.media_urls || null,
-                    likes_count: item.likes_count || 0,
-                    comments_count: item.comments_count || 0,
-                    created_at: item.created_at,
-                    updated_at: item.created_at,
-                    profiles: item.profiles
-                  }}
-                  onDelete={handleDelete}
-                />
-              )}
-            </Card>
-          ))}
+                </div> :
+        // Post Card
+        <PostCard post={{
+          id: item.id,
+          user_id: item.user_id,
+          title: item.title,
+          content: item.content,
+          media_urls: item.media_urls || null,
+          likes_count: item.likes_count || 0,
+          comments_count: item.comments_count || 0,
+          created_at: item.created_at,
+          updated_at: item.created_at,
+          profiles: item.profiles
+        }} onDelete={handleDelete} />}
+            </Card>)}
 
           {/* Load More */}
-          {hasMore && (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setPage(p => p + 1)}
-            >
+          {hasMore && <Button variant="outline" className="w-full" onClick={() => setPage(p => p + 1)}>
               Load More
-            </Button>
-          )}
-        </div>
-      ) : (
-        <Card className="p-8 text-center">
+            </Button>}
+        </div> : <Card className="p-8 text-center">
           <p className="text-muted-foreground">
             {searchQuery ? 'No results found' : 'No content yet. Be the first to create!'}
           </p>
-        </Card>
-      )}
-    </div>
-  );
+        </Card>}
+    </div>;
 }
