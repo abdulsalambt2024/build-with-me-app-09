@@ -141,10 +141,10 @@ export default function Auth() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" placeholder="your@miet.ac.in" value={loginForm.email} onChange={e => setLoginForm({
+                  <Input id="login-email" type="email" value={loginForm.email} onChange={e => setLoginForm({
                   ...loginForm,
                   email: e.target.value
-                })} disabled={isLoading} />
+                })} disabled={isLoading} placeholder="your@miet.ac.in or your@gmail.com" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
