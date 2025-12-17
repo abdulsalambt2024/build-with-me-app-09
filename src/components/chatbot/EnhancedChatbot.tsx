@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MessageCircle, X, Send, Volume2, VolumeX, Loader2, Bot } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { X, Send, Volume2, VolumeX, Bot, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { chatbotMessageSchema } from '@/lib/validation';
 
@@ -25,6 +25,7 @@ export function EnhancedChatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -33,6 +34,15 @@ export function EnhancedChatbot() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Animate the bot icon periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsAnimating(true);
+      setTimeout(() => setIsAnimating(false), 1000);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const { data: faqData } = useQuery({
     queryKey: ['chatbot-faq'],
@@ -93,7 +103,6 @@ export function EnhancedChatbot() {
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    // Validate input
     const validation = chatbotMessageSchema.safeParse({ message: input.trim() });
     if (!validation.success) {
       toast({
@@ -125,11 +134,8 @@ export function EnhancedChatbot() {
       const assistantMessage = data?.response || 'I apologize, but I encountered an issue. Please try again.';
       
       setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
-      
-      // Speak the response
       speakText(assistantMessage);
 
-      // Save to database
       if (user) {
         await supabase.from('chatbot_conversations').insert({
           user_id: user.id,
@@ -151,29 +157,49 @@ export function EnhancedChatbot() {
 
   return (
     <>
-      {/* Floating Button - Bottom right corner */}
-      <Button
-        className="fixed bottom-24 right-4 md:bottom-8 h-14 w-14 rounded-full shadow-lg z-40 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+      {/* Interactive Floating Robot Button */}
+      <button
+        className={`fixed bottom-24 right-4 md:bottom-8 h-16 w-16 rounded-full shadow-xl z-40 
+          bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500
+          hover:scale-110 transition-all duration-300 ease-out
+          flex items-center justify-center
+          ${isAnimating ? 'animate-bounce' : ''}
+          ${isSpeaking ? 'ring-4 ring-purple-300 ring-opacity-50 animate-pulse' : ''}
+          ${isOpen ? 'rotate-180' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
+        aria-label="Open chat assistant"
       >
-        {isOpen ? <X className="h-6 w-6" /> : <Bot className="h-6 w-6" />}
-      </Button>
+        <div className="relative">
+          {isOpen ? (
+            <X className="h-7 w-7 text-white" />
+          ) : (
+            <>
+              <Bot className="h-8 w-8 text-white" />
+              <Sparkles className={`absolute -top-1 -right-1 h-4 w-4 text-yellow-300 ${isAnimating ? 'animate-ping' : ''}`} />
+            </>
+          )}
+        </div>
+        {/* Pulsing ring effect */}
+        {!isOpen && (
+          <span className="absolute inset-0 rounded-full bg-purple-400 opacity-30 animate-ping" />
+        )}
+      </button>
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-40 right-4 md:bottom-24 w-[calc(100%-2rem)] md:w-96 h-[500px] flex flex-col z-40 shadow-xl border-2">
-          <CardHeader className="pb-2 flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-t-lg">
+        <Card className="fixed bottom-44 right-4 md:bottom-28 w-[calc(100%-2rem)] max-w-sm h-[450px] flex flex-col z-40 shadow-2xl border-0 overflow-hidden">
+          <CardHeader className="p-3 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border-2 border-white">
-                  <AvatarFallback className="bg-white text-indigo-600 font-bold">
-                    <Bot className="h-5 w-5" />
+              <div className="flex items-center gap-2">
+                <Avatar className="h-9 w-9 border-2 border-white/50 bg-white/20">
+                  <AvatarFallback className="bg-transparent">
+                    <Bot className="h-5 w-5 text-white" />
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <CardTitle className="text-base">Parivartan Assistant</CardTitle>
-                  <p className="text-xs text-white/80">
-                    {isLoading ? 'Typing...' : 'Online'}
+                  <CardTitle className="text-sm font-semibold">Parivartan AI</CardTitle>
+                  <p className="text-[10px] text-white/70">
+                    {isLoading ? '✨ Thinking...' : isSpeaking ? '🔊 Speaking...' : '🟢 Online'}
                   </p>
                 </div>
               </div>
@@ -181,11 +207,9 @@ export function EnhancedChatbot() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white hover:bg-white/20"
+                  className="h-7 w-7 text-white hover:bg-white/20"
                   onClick={() => {
-                    if (isSpeaking) {
-                      stopSpeaking();
-                    }
+                    if (isSpeaking) stopSpeaking();
                     setIsMuted(!isMuted);
                   }}
                 >
@@ -194,7 +218,7 @@ export function EnhancedChatbot() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white hover:bg-white/20"
+                  className="h-7 w-7 text-white hover:bg-white/20"
                   onClick={() => setIsOpen(false)}
                 >
                   <X className="h-4 w-4" />
@@ -202,27 +226,24 @@ export function EnhancedChatbot() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-              <div className="space-y-4">
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden bg-gradient-to-b from-background to-muted/30">
+            <ScrollArea className="flex-1 p-3" ref={scrollRef}>
+              <div className="space-y-3">
                 {messages.length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-indigo-100 to-purple-100 mb-4">
-                      <Bot className="h-8 w-8 text-indigo-600" />
+                  <div className="text-center py-6">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 mb-3">
+                      <Bot className="h-7 w-7 text-indigo-600" />
                     </div>
-                    <p className="font-medium text-foreground">Hi! I'm your Parivartan Assistant</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Ask me anything about the app!
+                    <p className="font-medium text-sm">Hi! I'm your AI Assistant</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      How can I help you today?
                     </p>
-                    <div className="mt-4 space-y-2">
-                      <p className="text-xs text-muted-foreground">Try asking:</p>
+                    <div className="mt-3 space-y-1.5">
                       {['How do I create a post?', 'What is AI Studio?', 'How to donate?'].map((q) => (
                         <button
                           key={q}
-                          onClick={() => {
-                            setInput(q);
-                          }}
-                          className="block w-full text-left text-sm px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                          onClick={() => setInput(q)}
+                          className="block w-full text-xs px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-left"
                         >
                           {q}
                         </button>
@@ -236,30 +257,30 @@ export function EnhancedChatbot() {
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2 ${
+                      className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
                         msg.role === 'user'
-                          ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-md'
-                          : 'bg-muted rounded-bl-md'
+                          ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-sm'
+                          : 'bg-card shadow-sm border rounded-bl-sm'
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      <p className="whitespace-pre-wrap text-[13px]">{msg.content}</p>
                     </div>
                   </div>
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+                    <div className="bg-card shadow-sm border rounded-2xl rounded-bl-sm px-4 py-3">
                       <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
                     </div>
                   </div>
                 )}
               </div>
             </ScrollArea>
-            <div className="p-4 border-t flex-shrink-0 bg-background">
+            <div className="p-3 border-t flex-shrink-0 bg-background">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -270,14 +291,14 @@ export function EnhancedChatbot() {
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type your message..."
+                  placeholder="Ask me anything..."
                   disabled={isLoading}
-                  className="flex-1 rounded-full"
+                  className="flex-1 rounded-full text-sm h-9"
                 />
                 <Button 
                   type="submit" 
                   size="icon" 
-                  className="rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                  className="rounded-full h-9 w-9 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
                   disabled={isLoading || !input.trim()}
                 >
                   <Send className="h-4 w-4" />

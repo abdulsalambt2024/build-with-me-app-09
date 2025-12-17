@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -13,11 +14,11 @@ serve(async (req) => {
   try {
     const { message, faqContext, conversationHistory } = await req.json();
     
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     
-    if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY is not configured');
-      throw new Error('GEMINI_API_KEY is not configured');
+    if (!OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not configured');
+      throw new Error('OPENAI_API_KEY is not configured');
     }
     
     // Build context from FAQ
@@ -54,15 +55,17 @@ Guidelines:
 - Help users navigate the app and understand features
 - Encourage community engagement`;
 
-    // Build messages for Gemini
-    const messages = [];
+    // Build messages for OpenAI
+    const messages: { role: string; content: string }[] = [
+      { role: 'system', content: systemPrompt }
+    ];
     
     // Add conversation history
     if (conversationHistory && conversationHistory.length > 0) {
       for (const msg of conversationHistory) {
         messages.push({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
+          role: msg.role,
+          content: msg.content
         });
       }
     }
@@ -70,39 +73,28 @@ Guidelines:
     // Add current message
     messages.push({
       role: 'user',
-      parts: [{ text: message }]
+      content: message
     });
 
-    console.log('Calling Gemini API with message:', message);
+    console.log('Calling OpenAI API with message:', message);
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: messages,
-        systemInstruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
-          topP: 0.9,
-          topK: 40
-        },
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }
-        ]
+        model: 'gpt-4o-mini',
+        messages,
+        max_tokens: 1024,
+        temperature: 0.7,
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
+      console.error('OpenAI API error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -111,13 +103,13 @@ Guidelines:
         );
       }
       
-      throw new Error(`Gemini API request failed: ${response.status}`);
+      throw new Error(`OpenAI API request failed: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Gemini response:', JSON.stringify(data));
+    console.log('OpenAI response received');
     
-    const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+    const botResponse = data.choices?.[0]?.message?.content || 
       'I apologize, but I could not process that request. Please try again.';
     
     return new Response(
