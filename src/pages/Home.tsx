@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Slideshow } from '@/components/home/Slideshow';
 import { CombinedFeed } from '@/components/feed/CombinedFeed';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, MessageCircle, Calendar, Lightbulb, UserCheck } from 'lucide-react';
+import { Users, MessageCircle, Calendar, Lightbulb, UserCheck, Grid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { CreatePostDialog } from '@/components/posts/CreatePostDialog';
@@ -82,7 +82,7 @@ export default function Home() {
           <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
             <CardContent className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-lg bg-secondary/20">
-                <MessageCircle className="h-5 w-5 text-secondary" />
+                <Grid className="h-5 w-5 text-secondary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.posts || 0}</p>
