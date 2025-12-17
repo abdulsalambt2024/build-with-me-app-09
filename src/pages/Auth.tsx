@@ -144,7 +144,7 @@ export default function Auth() {
                   <Input id="login-email" type="email" value={loginForm.email} onChange={e => setLoginForm({
                   ...loginForm,
                   email: e.target.value
-                })} disabled={isLoading} placeholder="your@miet.ac.in or your@gmail.com" />
+                })} disabled={isLoading} placeholder="your@miet.ac.in" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
