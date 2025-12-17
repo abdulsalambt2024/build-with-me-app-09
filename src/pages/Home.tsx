@@ -4,26 +4,34 @@ import { supabase } from '@/integrations/supabase/client';
 import { Slideshow } from '@/components/home/Slideshow';
 import { CombinedFeed } from '@/components/feed/CombinedFeed';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, MessageCircle, Calendar, Award } from 'lucide-react';
+import { Users, MessageCircle, Calendar, Lightbulb, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { CreatePostDialog } from '@/components/posts/CreatePostDialog';
 import { CreateEventDialog } from '@/components/events/CreateEventDialog';
-
 export default function Home() {
-  const { user, role } = useAuth();
+  const {
+    user,
+    role
+  } = useAuth();
   const navigate = useNavigate();
   const canCreate = role !== 'viewer';
   const isAdmin = role === 'admin' || role === 'super_admin';
-
-  const { data: stats } = useQuery({
+  const {
+    data: stats
+  } = useQuery({
     queryKey: ['home-stats'],
     queryFn: async () => {
-      const [membersRes, eventsRes, postsRes] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('events').select('id', { count: 'exact', head: true }).gte('event_date', new Date().toISOString()),
-        supabase.from('posts').select('id', { count: 'exact', head: true })
-      ]);
+      const [membersRes, eventsRes, postsRes] = await Promise.all([supabase.from('profiles').select('id', {
+        count: 'exact',
+        head: true
+      }), supabase.from('events').select('id', {
+        count: 'exact',
+        head: true
+      }).gte('event_date', new Date().toISOString()), supabase.from('posts').select('id', {
+        count: 'exact',
+        head: true
+      })]);
       return {
         members: membersRes.count || 0,
         upcomingEvents: eventsRes.count || 0,
@@ -31,19 +39,20 @@ export default function Home() {
       };
     }
   });
-
-  const { data: profile } = useQuery({
+  const {
+    data: profile
+  } = useQuery({
     queryKey: ['user-profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase.from('profiles').select('full_name').eq('user_id', user.id).single();
+      const {
+        data
+      } = await supabase.from('profiles').select('full_name').eq('user_id', user.id).single();
       return data;
     },
     enabled: !!user?.id
   });
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <div className="container max-w-6xl mx-auto p-4 space-y-6">
         {/* Welcome Section */}
         <div className="space-y-1">
@@ -97,7 +106,7 @@ export default function Home() {
           <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
             <CardContent className="p-4 flex items-center gap-3">
               <div className="p-2 rounded-lg bg-emerald-500/20">
-                <Award className="h-5 w-5 text-emerald-500" />
+                <UserCheck className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
                 <p className="text-2xl font-bold">85%</p>
@@ -108,33 +117,23 @@ export default function Home() {
         </div>
 
         {/* Quick Actions */}
-        {canCreate && (
-          <Card>
+        {canCreate && <Card>
             <CardContent className="p-4">
               <h3 className="font-semibold mb-3">Quick Actions</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <CreatePostDialog />
                 {isAdmin && <CreateEventDialog />}
-                <Button 
-                  variant="outline" 
-                  className="h-auto flex-col gap-2 py-4" 
-                  onClick={() => navigate('/chat')}
-                >
+                <Button variant="outline" className="h-auto flex-col gap-2 py-4" onClick={() => navigate('/chat')}>
                   <Users className="h-5 w-5 text-accent" />
                   <span className="text-xs">Start Chat</span>
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-auto flex-col gap-2 py-4" 
-                  onClick={() => navigate('/ai-studio')}
-                >
-                  <Award className="h-5 w-5 text-purple-500" />
-                  <span className="text-xs">AI Assistant</span>
+                <Button variant="outline" className="h-auto flex-col gap-2 py-4" onClick={() => navigate('/ai-studio')}>
+                  <Lightbulb className="h-5 w-5 text-purple-500" />
+                  <span className="text-xs">AI Studio </span>
                 </Button>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
 
         {/* Community Feed */}
         <div>
@@ -145,6 +144,5 @@ export default function Home() {
           <CombinedFeed />
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
