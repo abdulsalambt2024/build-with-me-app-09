@@ -4,10 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { X, Send, Volume2, VolumeX, Bot, Sparkles } from 'lucide-react';
+import { X, Send, Volume2, VolumeX, Bot, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { chatbotMessageSchema } from '@/lib/validation';
 
@@ -20,6 +19,7 @@ export function EnhancedChatbot() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -155,27 +155,36 @@ export function EnhancedChatbot() {
     }
   };
 
+  const handleOpenFullScreen = () => {
+    setIsOpen(true);
+    setIsFullScreen(true);
+  };
+
+  const chatWindowClasses = isFullScreen 
+    ? 'fixed inset-0 z-50 flex flex-col bg-background'
+    : 'fixed bottom-44 right-4 md:bottom-28 w-[calc(100%-2rem)] max-w-sm h-[450px] flex flex-col z-40 shadow-2xl border rounded-xl overflow-hidden bg-background';
+
   return (
     <>
       {/* Interactive Floating Robot Button */}
       <button
-        className={`fixed bottom-24 right-4 md:bottom-8 h-16 w-16 rounded-full shadow-xl z-40 
+        className={`fixed bottom-24 right-4 md:bottom-8 h-14 w-14 md:h-16 md:w-16 rounded-full shadow-xl z-40 
           bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500
           hover:scale-110 transition-all duration-300 ease-out
           flex items-center justify-center
           ${isAnimating ? 'animate-bounce' : ''}
           ${isSpeaking ? 'ring-4 ring-purple-300 ring-opacity-50 animate-pulse' : ''}
-          ${isOpen ? 'rotate-180' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
+          ${isOpen && !isFullScreen ? 'rotate-180' : ''}`}
+        onClick={() => isOpen ? setIsOpen(false) : handleOpenFullScreen()}
         aria-label="Open chat assistant"
       >
         <div className="relative">
-          {isOpen ? (
-            <X className="h-7 w-7 text-white" />
+          {isOpen && !isFullScreen ? (
+            <X className="h-6 w-6 md:h-7 md:w-7 text-white" />
           ) : (
             <>
-              <Bot className="h-8 w-8 text-white" />
-              <Sparkles className={`absolute -top-1 -right-1 h-4 w-4 text-yellow-300 ${isAnimating ? 'animate-ping' : ''}`} />
+              <Bot className="h-7 w-7 md:h-8 md:w-8 text-white" />
+              <Sparkles className={`absolute -top-1 -right-1 h-3 w-3 md:h-4 md:w-4 text-yellow-300 ${isAnimating ? 'animate-ping' : ''}`} />
             </>
           )}
         </div>
@@ -187,18 +196,19 @@ export function EnhancedChatbot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-44 right-4 md:bottom-28 w-[calc(100%-2rem)] max-w-sm h-[450px] flex flex-col z-40 shadow-2xl border-0 overflow-hidden">
-          <CardHeader className="p-3 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white">
+        <div className={chatWindowClasses}>
+          {/* Header */}
+          <div className="p-3 md:p-4 flex-shrink-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-9 w-9 border-2 border-white/50 bg-white/20">
+              <div className="flex items-center gap-2 md:gap-3">
+                <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white/50 bg-white/20">
                   <AvatarFallback className="bg-transparent">
-                    <Bot className="h-5 w-5 text-white" />
+                    <Bot className="h-5 w-5 md:h-6 md:w-6 text-white" />
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <CardTitle className="text-sm font-semibold">Parivartan AI</CardTitle>
-                  <p className="text-[10px] text-white/70">
+                  <h2 className="text-base md:text-lg font-bold">PARI</h2>
+                  <p className="text-[10px] md:text-xs text-white/70">
                     {isLoading ? '✨ Thinking...' : isSpeaking ? '🔊 Speaking...' : '🟢 Online'}
                   </p>
                 </div>
@@ -207,7 +217,7 @@ export function EnhancedChatbot() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-white hover:bg-white/20"
+                  className="h-8 w-8 text-white hover:bg-white/20"
                   onClick={() => {
                     if (isSpeaking) stopSpeaking();
                     setIsMuted(!isMuted);
@@ -218,95 +228,120 @@ export function EnhancedChatbot() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-white hover:bg-white/20"
-                  onClick={() => setIsOpen(false)}
+                  className="h-8 w-8 text-white hover:bg-white/20"
+                  onClick={() => setIsFullScreen(!isFullScreen)}
+                >
+                  {isFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white hover:bg-white/20"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setIsFullScreen(false);
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden bg-gradient-to-b from-background to-muted/30">
-            <ScrollArea className="flex-1 p-3" ref={scrollRef}>
-              <div className="space-y-3">
-                {messages.length === 0 && (
-                  <div className="text-center py-6">
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 mb-3">
-                      <Bot className="h-7 w-7 text-indigo-600" />
-                    </div>
-                    <p className="font-medium text-sm">Hi! I'm your AI Assistant</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      How can I help you today?
-                    </p>
-                    <div className="mt-3 space-y-1.5">
-                      {['How do I create a post?', 'What is AI Studio?', 'How to donate?'].map((q) => (
-                        <button
-                          key={q}
-                          onClick={() => setInput(q)}
-                          className="block w-full text-xs px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-left"
-                        >
-                          {q}
-                        </button>
-                      ))}
-                    </div>
+          </div>
+
+          {/* Messages */}
+          <ScrollArea className="flex-1 p-3 md:p-4" ref={scrollRef}>
+            <div className="space-y-3 md:space-y-4 max-w-2xl mx-auto">
+              {messages.length === 0 && (
+                <div className="text-center py-8 md:py-12">
+                  <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 mb-4">
+                    <Bot className="h-8 w-8 md:h-10 md:w-10 text-indigo-600" />
                   </div>
-                )}
-                {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                        msg.role === 'user'
-                          ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-sm'
-                          : 'bg-card shadow-sm border rounded-bl-sm'
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap text-[13px]">{msg.content}</p>
-                    </div>
+                  <p className="font-bold text-lg md:text-xl">Hi! I'm PARI 👋</p>
+                  <p className="text-sm md:text-base text-muted-foreground mt-2">
+                    Your PARIVARTAN Assistant. How can I help you today?
+                  </p>
+                  <div className="mt-4 md:mt-6 grid grid-cols-1 gap-2 max-w-xs mx-auto">
+                    {['What is my name?', 'How do I create a post?', 'What is AI Studio?', 'How to donate?'].map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => setInput(q)}
+                        className="text-sm px-4 py-2.5 rounded-xl bg-muted hover:bg-muted/80 transition-colors text-left"
+                      >
+                        {q}
+                      </button>
+                    ))}
                   </div>
-                ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-card shadow-sm border rounded-2xl rounded-bl-sm px-4 py-3">
-                      <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-            <div className="p-3 border-t flex-shrink-0 bg-background">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  sendMessage();
-                }}
-                className="flex gap-2"
-              >
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask me anything..."
-                  disabled={isLoading}
-                  className="flex-1 rounded-full text-sm h-9"
-                />
-                <Button 
-                  type="submit" 
-                  size="icon" 
-                  className="rounded-full h-9 w-9 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
-                  disabled={isLoading || !input.trim()}
+                </div>
+              )}
+              {messages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </form>
+                  {msg.role === 'assistant' && (
+                    <Avatar className="h-8 w-8 mr-2 flex-shrink-0">
+                      <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500">
+                        <Bot className="h-4 w-4 text-white" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div
+                    className={`max-w-[80%] md:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm md:text-base ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-sm'
+                        : 'bg-card shadow-sm border rounded-bl-sm'
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <Avatar className="h-8 w-8 mr-2 flex-shrink-0">
+                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500">
+                      <Bot className="h-4 w-4 text-white" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="bg-card shadow-sm border rounded-2xl rounded-bl-sm px-4 py-3">
+                    <div className="flex gap-1.5">
+                      <span className="w-2.5 h-2.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2.5 h-2.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2.5 h-2.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
+          </ScrollArea>
+
+          {/* Input */}
+          <div className="p-3 md:p-4 border-t flex-shrink-0 bg-background">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
+              className="flex gap-2 max-w-2xl mx-auto"
+            >
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask PARI anything..."
+                disabled={isLoading}
+                className="flex-1 rounded-full text-sm md:text-base h-10 md:h-11"
+              />
+              <Button 
+                type="submit" 
+                size="icon" 
+                className="rounded-full h-10 w-10 md:h-11 md:w-11 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                disabled={isLoading || !input.trim()}
+              >
+                <Send className="h-4 w-4 md:h-5 md:w-5" />
+              </Button>
+            </form>
+          </div>
+        </div>
       )}
     </>
   );
