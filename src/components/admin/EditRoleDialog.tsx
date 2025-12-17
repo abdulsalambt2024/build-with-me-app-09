@@ -68,10 +68,7 @@ export function EditRoleDialog({ user, open, onOpenChange }: EditRoleDialogProps
   };
 
   const handleUpdateRole = async () => {
-    if (selectedRole === user.role) {
-      toast({ title: 'No changes made', description: 'Role is already set to ' + selectedRole });
-      return;
-    }
+    // Allow re-assigning same role (for demotion/promotion scenarios)
 
     // Prevent non-super-admins from modifying super_admin roles
     if (user.role === 'super_admin' && !isSuperAdmin) {
@@ -178,7 +175,7 @@ export function EditRoleDialog({ user, open, onOpenChange }: EditRoleDialogProps
             </Button>
             <Button 
               onClick={handleUpdateRole} 
-              disabled={isUpdating || selectedRole === user.role}
+              disabled={isUpdating}
             >
               {isUpdating ? 'Updating...' : 'Update Role'}
             </Button>

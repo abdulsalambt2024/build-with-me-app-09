@@ -2,23 +2,19 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useGenerateImage, useEnhanceImage, useAIUsage, useDeleteAIUsage } from '@/hooks/useAIStudio';
-import { Wand2, Sparkles, Image as ImageIcon, Loader2, Download, ExternalLink, Palette, Trash2 } from 'lucide-react';
+import { useGenerateImage, useAIUsage, useDeleteAIUsage } from '@/hooks/useAIStudio';
+import { Sparkles, Image as ImageIcon, Loader2, Download, ExternalLink, Palette, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AIStudio() {
   const [prompt, setPrompt] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [instruction, setInstruction] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [posterPrompt, setPosterPrompt] = useState('');
 
   const { toast } = useToast();
   const { data: usage } = useAIUsage();
   const generateImage = useGenerateImage();
-  const enhanceImage = useEnhanceImage();
   const deleteAIUsage = useDeleteAIUsage();
 
   const handleGenerate = async () => {
@@ -33,21 +29,6 @@ export default function AIStudio() {
       toast({ title: 'Image generated successfully!' });
     } catch (error) {
       toast({ title: 'Failed to generate image', variant: 'destructive' });
-    }
-  };
-
-  const handleEnhance = async () => {
-    if (!imageUrl.trim() || !instruction.trim()) {
-      toast({ title: 'Please provide both image URL and instruction', variant: 'destructive' });
-      return;
-    }
-
-    try {
-      const result = await enhanceImage.mutateAsync({ imageUrl, instruction });
-      setGeneratedImage(result);
-      toast({ title: 'Image enhanced successfully!' });
-    } catch (error) {
-      toast({ title: 'Failed to enhance image', variant: 'destructive' });
     }
   };
 
@@ -104,14 +85,10 @@ export default function AIStudio() {
       </div>
 
       <Tabs defaultValue="generate" className="space-y-6">
-        <TabsList className="grid w-full max-w-lg grid-cols-4">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
           <TabsTrigger value="generate">
             <Sparkles className="h-4 w-4 mr-2" />
             Generate
-          </TabsTrigger>
-          <TabsTrigger value="enhance">
-            <Wand2 className="h-4 w-4 mr-2" />
-            Enhance
           </TabsTrigger>
           <TabsTrigger value="poster">
             <Palette className="h-4 w-4 mr-2" />
@@ -170,91 +147,6 @@ export default function AIStudio() {
                     <img
                       src={generatedImage}
                       alt="Generated"
-                      className="w-full rounded-lg"
-                    />
-                    <div className="flex gap-2">
-                      <Button onClick={handleDownload} variant="outline" className="flex-1">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                      <Button onClick={openInCanva} variant="outline" className="flex-1">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Edit in Canva
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="enhance">
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Image Enhancer</CardTitle>
-                <CardDescription>
-                  Enhance or modify an existing image
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Image URL
-                  </label>
-                  <Input
-                    placeholder="https://example.com/image.jpg"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Enhancement Instruction
-                  </label>
-                  <Textarea
-                    placeholder="e.g., Make it more vibrant and add dramatic lighting"
-                    value={instruction}
-                    onChange={(e) => setInstruction(e.target.value)}
-                    rows={4}
-                  />
-                </div>
-                <Button
-                  onClick={handleEnhance}
-                  disabled={enhanceImage.isPending}
-                  className="w-full"
-                >
-                  {enhanceImage.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Enhancing...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="h-4 w-4 mr-2" />
-                      Enhance Image
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Preview</CardTitle>
-                <CardDescription>Enhanced image will appear here</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {generatedImage ? (
-                  <div className="space-y-4">
-                    <img
-                      src={generatedImage}
-                      alt="Enhanced"
                       className="w-full rounded-lg"
                     />
                     <div className="flex gap-2">
@@ -367,7 +259,7 @@ export default function AIStudio() {
             <CardHeader>
               <CardTitle>Usage History</CardTitle>
               <CardDescription>
-                Your AI-generated and enhanced images
+                Your AI-generated images
               </CardDescription>
             </CardHeader>
             <CardContent>
