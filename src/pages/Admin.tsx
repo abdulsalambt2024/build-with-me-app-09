@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FileText, BarChart3, Settings as SettingsIcon, Bug, CreditCard, CalendarCheck, Image, Shield } from 'lucide-react';
+import { Users, FileText, BarChart3, Settings as SettingsIcon, Bug, CreditCard, CalendarCheck, Image, Shield, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TaskManagement } from '@/components/tasks/TaskManagement';
 
@@ -38,6 +38,12 @@ export default function Admin() {
       description: 'Manage homepage slideshow images',
       icon: Image,
       path: '/admin/slideshow',
+    },
+    {
+      title: 'Popup Messages',
+      description: 'Schedule birthday & festival greetings',
+      icon: Bell,
+      path: '/admin/popups',
     },
     {
       title: 'Badge Management',

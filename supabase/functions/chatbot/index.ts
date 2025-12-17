@@ -14,17 +14,17 @@ serve(async (req) => {
   try {
     const { message, faqContext, conversationHistory } = await req.json();
     
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     
-    if (!OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY is not configured');
-      throw new Error('OPENAI_API_KEY is not configured');
+    if (!GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY is not configured');
+      throw new Error('GEMINI_API_KEY is not configured');
     }
     
-    // Build context from FAQ
     const faqText = faqContext || '';
     
-    const systemPrompt = `You are PARIVARTAN Assistant, a friendly and helpful AI chatbot for the PARIVARTAN community app. 
+    const systemPrompt = `You are PARI, a friendly and helpful AI assistant for the PARIVARTAN community app. 
+Your name is PARI (short for PARIVARTAN Assistant Robot Intelligence). Always introduce yourself as PARI.
 Your role is to help users understand and use the app features effectively. Be conversational, helpful, and concise.
 
 Available features in PARIVARTAN:
@@ -49,52 +49,55 @@ FAQ Knowledge Base:
 ${faqText}
 
 Guidelines:
+- Always introduce yourself as PARI when asked your name
 - Be friendly and use a warm, supportive tone
 - Keep responses concise but helpful
 - If you don't know something specific, suggest contacting an admin
 - Help users navigate the app and understand features
 - Encourage community engagement`;
 
-    // Build messages for OpenAI
-    const messages: { role: string; content: string }[] = [
-      { role: 'system', content: systemPrompt }
-    ];
+    // Build contents for Gemini
+    const contents: { role: string; parts: { text: string }[] }[] = [];
     
     // Add conversation history
     if (conversationHistory && conversationHistory.length > 0) {
       for (const msg of conversationHistory) {
-        messages.push({
-          role: msg.role,
-          content: msg.content
+        contents.push({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }]
         });
       }
     }
     
-    // Add current message
-    messages.push({
+    // Add current message with system context
+    const userMessageWithContext = conversationHistory?.length > 0 
+      ? message 
+      : `${systemPrompt}\n\nUser message: ${message}`;
+    
+    contents.push({
       role: 'user',
-      content: message
+      parts: [{ text: userMessageWithContext }]
     });
 
-    console.log('Calling OpenAI API with message:', message);
+    console.log('Calling Gemini API with message:', message);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages,
-        max_tokens: 1024,
-        temperature: 0.7,
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        }
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
+      console.error('Gemini API error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -103,13 +106,13 @@ Guidelines:
         );
       }
       
-      throw new Error(`OpenAI API request failed: ${response.status}`);
+      throw new Error(`Gemini API request failed: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI response received');
+    console.log('Gemini response received');
     
-    const botResponse = data.choices?.[0]?.message?.content || 
+    const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 
       'I apologize, but I could not process that request. Please try again.';
     
     return new Response(
