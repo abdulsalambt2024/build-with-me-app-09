@@ -124,7 +124,7 @@ export default function Home() {
                 <CreatePostDialog />
                 {isAdmin && <CreateEventDialog />}
                 <Button variant="outline" className="h-auto flex-col gap-2 py-4" onClick={() => navigate('/chat')}>
-                  <Users className="h-5 w-5 text-accent" />
+                  <MessageCircle className="h-5 w-5 text-accent" />
                   <span className="text-xs">Start Chat</span>
                 </Button>
                 <Button variant="outline" className="h-auto flex-col gap-2 py-4" onClick={() => navigate('/ai-studio')}>
