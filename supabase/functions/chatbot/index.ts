@@ -14,11 +14,11 @@ serve(async (req) => {
   try {
     const { message, faqContext, conversationHistory } = await req.json();
     
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
-    if (!OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY is not configured');
-      throw new Error('OPENAI_API_KEY is not configured');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY is not configured');
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
     
     const faqText = faqContext || '';
@@ -31,8 +31,8 @@ Available features in PARIVARTAN:
 - Events: Browse and register for events
 - Announcements: View important announcements
 - Donations: Support campaigns via UPI
-- AI Studio: Generate and enhance images (Members/Admins only)
-- Chat: Real-time group and private messaging (Members/Admins only)
+- AI Studio: Generate images (Members/Admins only)
+- Chat: Real-time group messaging (Members/Admins only)
 - Achievements: Earn badges for contributions
 - Tasks: View and manage assigned tasks
 - Profile: Update profile information
@@ -55,7 +55,7 @@ Guidelines:
 - Help users navigate the app
 - Encourage community engagement`;
 
-    // Build messages for OpenAI
+    // Build messages for Lovable AI
     const messages: { role: string; content: string }[] = [
       { role: 'system', content: systemPrompt }
     ];
@@ -76,12 +76,12 @@ Guidelines:
       content: message
     });
 
-    console.log('Calling OpenAI API with message:', message);
+    console.log('Calling Lovable AI API with message:', message);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -94,7 +94,7 @@ Guidelines:
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
+      console.error('Lovable AI API error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -103,11 +103,11 @@ Guidelines:
         );
       }
       
-      throw new Error(`OpenAI API request failed: ${response.status}`);
+      throw new Error(`Lovable AI API request failed: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI response received');
+    console.log('Lovable AI response received');
     
     const botResponse = data.choices?.[0]?.message?.content || 
       'I apologize, but I could not process that request. Please try again.';
