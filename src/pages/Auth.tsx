@@ -125,9 +125,10 @@ export default function Auth() {
   return <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-2xl font-bold">ENLIGHTEN A CHILD, DISCOVER A PERSONALITY</CardTitle>
-          <p className="text-sm font-medium text-primary">Educating & Empowering Rural Youth</p>
-          <CardDescription className="text-xs">Making a difference, One Sunday at a Time</CardDescription>
+          <CardTitle className="text-2xl font-bold">ENLIGHTEN A CHILD, 
+DISCOVER A PERSONALITY</CardTitle>
+          
+          
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
