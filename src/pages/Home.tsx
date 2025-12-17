@@ -56,10 +56,10 @@ export default function Home() {
       <div className="container max-w-6xl mx-auto p-4 space-y-6">
         {/* Welcome Section */}
         <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-bold">
+          <h1 className="text-2xl md:text-3xl font-bold font-serif">
             Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}!
           </h1>
-          <p className="text-muted-foreground text-sm">Here's what's happening with your team today.</p>
+          
         </div>
 
         {/* Slideshow */}
