@@ -27,6 +27,7 @@ import PaymentTransactions from "./pages/admin/PaymentTransactions";
 import Attendance from "./pages/admin/Attendance";
 import SlideshowManager from "./pages/admin/SlideshowManager";
 import BadgeManagement from "./pages/admin/BadgeManagement";
+import PopupManager from "./pages/admin/PopupManager";
 import PerformanceDashboard from "./pages/PerformanceDashboard";
 import ProfileEdit from "./pages/ProfileEdit";
 import CampaignDetail from "./pages/CampaignDetail";
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="/admin/attendance" element={<Layout><ProtectedRoute requiredRole="admin"><Attendance /></ProtectedRoute></Layout>} />
               <Route path="/admin/slideshow" element={<Layout><ProtectedRoute requiredRole="admin"><SlideshowManager /></ProtectedRoute></Layout>} />
               <Route path="/admin/badges" element={<Layout><ProtectedRoute requiredRole="super_admin"><BadgeManagement /></ProtectedRoute></Layout>} />
+              <Route path="/admin/popups" element={<Layout><ProtectedRoute requiredRole="super_admin"><PopupManager /></ProtectedRoute></Layout>} />
               <Route path="/performance" element={<Layout><ProtectedRoute><PerformanceDashboard /></ProtectedRoute></Layout>} />
               <Route path="/donations/:id" element={<Layout><ProtectedRoute><CampaignDetail /></ProtectedRoute></Layout>} />
               <Route path="/settings" element={<Layout><ProtectedRoute><Settings /></ProtectedRoute></Layout>} />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,10 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function TaskManagement() {
+  const { role } = useAuth();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -99,6 +101,21 @@ export function TaskManagement() {
     }
   });
 
+  const deleteTask = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Task deleted');
+    },
+    onError: () => toast.error('Failed to delete task')
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.assigned_to || !formData.deadline) {
@@ -107,6 +124,8 @@ export function TaskManagement() {
     }
     createTask.mutate(formData);
   };
+
+  const canDeleteTasks = role === 'admin' || role === 'super_admin';
 
   return (
     <div className="space-y-6">
@@ -214,7 +233,23 @@ export function TaskManagement() {
                   <span>Assigned to: {task.assigned_to_profile?.full_name}</span>
                   <span>Due: {new Date(task.deadline).toLocaleDateString()}</span>
                 </div>
-                <Badge variant="outline" className="mt-2">{task.status}</Badge>
+                <div className="flex items-center justify-between mt-2">
+                  <Badge variant="outline">{task.status}</Badge>
+                  {canDeleteTasks && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => {
+                        if (confirm('Delete this task permanently?')) {
+                          deleteTask.mutate(task.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}

@@ -6,11 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Image as ImageIcon, Paperclip, Mic, Reply, Pin, Trash2, Check, CheckCheck, MoreVertical, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Send, Image as ImageIcon, Paperclip, Mic, Reply, Pin, Trash2, Check, CheckCheck, MoreVertical, Users, Info } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { chatMessageSchema } from '@/lib/validation';
+import { GroupInfoPanel } from './GroupInfoPanel';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +47,7 @@ export function UnifiedGroupChat() {
   const queryClient = useQueryClient();
   const [message, setMessage] = useState('');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
@@ -231,17 +235,21 @@ export function UnifiedGroupChat() {
           <h2 className="font-semibold">PARIVARTAN Community</h2>
           <p className="text-xs text-emerald-100">{messages.length} messages</p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <Sheet open={showGroupInfo} onOpenChange={setShowGroupInfo}>
+          <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="text-white hover:bg-emerald-500">
-              <MoreVertical className="h-5 w-5" />
+              <Info className="h-5 w-5" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>View Group Info</DropdownMenuItem>
-            <DropdownMenuItem>Search Messages</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </SheetTrigger>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Group Info</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4">
+              <GroupInfoPanel roomId={UNIFIED_ROOM_ID} />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {/* Messages */}
