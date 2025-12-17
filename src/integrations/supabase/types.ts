@@ -152,6 +152,9 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          is_pinned: boolean | null
+          pinned_at: string | null
+          pinned_by: string | null
           priority: string
           title: string
           updated_at: string
@@ -162,6 +165,9 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          is_pinned?: boolean | null
+          pinned_at?: string | null
+          pinned_by?: string | null
           priority: string
           title: string
           updated_at?: string
@@ -172,6 +178,9 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          is_pinned?: boolean | null
+          pinned_at?: string | null
+          pinned_by?: string | null
           priority?: string
           title?: string
           updated_at?: string
@@ -1017,8 +1026,11 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          is_pinned: boolean | null
           likes_count: number | null
           media_urls: string[] | null
+          pinned_at: string | null
+          pinned_by: string | null
           title: string
           updated_at: string
           user_id: string
@@ -1028,8 +1040,11 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          is_pinned?: boolean | null
           likes_count?: number | null
           media_urls?: string[] | null
+          pinned_at?: string | null
+          pinned_by?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -1039,8 +1054,11 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          is_pinned?: boolean | null
           likes_count?: number | null
           media_urls?: string[] | null
+          pinned_at?: string | null
+          pinned_by?: string | null
           title?: string
           updated_at?: string
           user_id?: string
