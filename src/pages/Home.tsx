@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { CreatePostDialog } from '@/components/posts/CreatePostDialog';
 import { CreateEventDialog } from '@/components/events/CreateEventDialog';
+import { PopupDisplay } from '@/components/popup/PopupDisplay';
 export default function Home() {
   const {
     user,
@@ -52,14 +53,15 @@ export default function Home() {
     },
     enabled: !!user?.id
   });
-  return <div className="min-h-screen bg-background">
+  return (
+    <div className="min-h-screen bg-background">
+      <PopupDisplay />
       <div className="container max-w-6xl mx-auto p-4 space-y-6">
         {/* Welcome Section */}
         <div className="space-y-1">
           <h1 className="text-2xl md:text-3xl font-bold font-serif">
             Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}!
           </h1>
-          
         </div>
 
         {/* Slideshow */}
@@ -144,5 +146,6 @@ export default function Home() {
           <CombinedFeed />
         </div>
       </div>
-    </div>;
+    </div>
+  );
 }
