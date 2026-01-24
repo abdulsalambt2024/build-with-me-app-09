@@ -952,6 +952,35 @@ export type Database = {
           },
         ]
       }
+      popup_views: {
+        Row: {
+          id: string
+          popup_id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          popup_id: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          popup_id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "popup_views_popup_id_fkey"
+            columns: ["popup_id"]
+            isOneToOne: false
+            referencedRelation: "popups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       popups: {
         Row: {
           created_at: string | null

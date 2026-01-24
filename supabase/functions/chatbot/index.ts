@@ -14,11 +14,11 @@ serve(async (req) => {
   try {
     const { message, faqContext, conversationHistory } = await req.json();
     
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
-    if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY is not configured');
-      throw new Error('GEMINI_API_KEY is not configured');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY is not configured');
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
     
     const faqText = faqContext || '';
@@ -55,53 +55,46 @@ Guidelines:
 - Help users navigate the app
 - Encourage community engagement`;
 
-    // Build conversation for Gemini
-    const contents: { role: string; parts: { text: string }[] }[] = [];
+    // Build messages for Lovable AI
+    const messages: { role: string; content: string }[] = [
+      { role: 'system', content: systemPrompt }
+    ];
     
     // Add conversation history
     if (conversationHistory && conversationHistory.length > 0) {
       for (const msg of conversationHistory) {
-        contents.push({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
+        messages.push({
+          role: msg.role,
+          content: msg.content
         });
       }
     }
     
-    // Add current message with system context
-    const userMessage = conversationHistory?.length === 0 
-      ? `${systemPrompt}\n\nUser: ${message}`
-      : message;
-    
-    contents.push({
+    // Add current message
+    messages.push({
       role: 'user',
-      parts: [{ text: userMessage }]
+      content: message
     });
 
-    console.log('Calling Gemini API with message:', message);
+    console.log('Calling Lovable AI with message:', message);
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents,
-        systemInstruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
-          topP: 0.95,
-          topK: 40
-        }
+        model: 'google/gemini-3-flash-preview',
+        messages,
+        max_tokens: 1024,
+        temperature: 0.7,
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
+      console.error('Lovable AI error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -110,13 +103,20 @@ Guidelines:
         );
       }
       
-      throw new Error(`Gemini API request failed: ${response.status}`);
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'Payment required. Please add credits to continue.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw new Error(`Lovable AI request failed: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Gemini API response received');
+    console.log('Lovable AI response received');
     
-    const botResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+    const botResponse = data.choices?.[0]?.message?.content || 
       'I apologize, but I could not process that request. Please try again.';
     
     return new Response(
