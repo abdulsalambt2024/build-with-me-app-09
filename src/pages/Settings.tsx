@@ -43,10 +43,8 @@ export default function Settings() {
     showOnlineStatus: true,
   });
 
-  const isSuperAdmin = role === 'super_admin' && (
-    user?.email === 'abdul.salam.bt.2024@miet.ac.in' ||
-    user?.email === 'hayatamr9608@gmail.com'
-  );
+  // 2FA is available for all users except viewers
+  const canUse2FA = role !== 'viewer';
 
   const handleNotificationChange = (key: string, value: boolean) => {
     setNotifications(prev => ({ ...prev, [key]: value }));
@@ -112,7 +110,7 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {isSuperAdmin && <TwoFactorAuth />}
+      {canUse2FA && <TwoFactorAuth />}
 
       <Card>
         <CardHeader className="pb-3">
