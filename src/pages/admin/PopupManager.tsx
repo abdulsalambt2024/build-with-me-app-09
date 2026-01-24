@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Edit, Calendar, Gift, PartyPopper, Bell, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit, Calendar, Gift, PartyPopper, Bell, Eye, Loader2, X, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -33,6 +33,8 @@ export default function PopupManager() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPopup, setEditingPopup] = useState<Popup | null>(null);
+  const [previewPopup, setPreviewPopup] = useState<Popup | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     message: '',
@@ -175,6 +177,49 @@ export default function PopupManager() {
     }
   };
 
+  const getGradient = (type: string) => {
+    switch (type) {
+      case 'birthday': return 'from-pink-500/20 via-purple-500/10 to-pink-500/20';
+      case 'festival': return 'from-yellow-500/20 via-orange-500/10 to-yellow-500/20';
+      case 'announcement': return 'from-primary/20 via-primary/10 to-primary/20';
+      default: return 'from-primary/20 via-primary/10 to-primary/20';
+    }
+  };
+
+  const getPreviewIcon = (type: string) => {
+    switch (type) {
+      case 'birthday': return <Gift className="h-8 w-8 text-pink-500" />;
+      case 'festival': return <PartyPopper className="h-8 w-8 text-yellow-500" />;
+      case 'announcement': return <Bell className="h-8 w-8 text-primary" />;
+      default: return <Sparkles className="h-8 w-8 text-primary" />;
+    }
+  };
+
+  const handlePreview = (popup: Popup) => {
+    setPreviewPopup(popup);
+    setShowPreview(true);
+  };
+
+  const handlePreviewFromForm = () => {
+    if (!formData.title || !formData.message) {
+      toast.error('Please fill in title and message to preview');
+      return;
+    }
+    const previewData: Popup = {
+      id: 'preview',
+      title: formData.title,
+      message: formData.message,
+      image_url: formData.image_url || null,
+      popup_type: formData.popup_type,
+      show_date: formData.show_date || new Date().toISOString(),
+      is_active: formData.is_active,
+      created_by: user?.id || '',
+      created_at: new Date().toISOString()
+    };
+    setPreviewPopup(previewData);
+    setShowPreview(true);
+  };
+
   return (
     <div className="container max-w-7xl mx-auto p-4 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -247,10 +292,21 @@ export default function PopupManager() {
                   onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={createPopup.isPending || updatePopup.isPending}>
-                {(createPopup.isPending || updatePopup.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {editingPopup ? 'Update Popup' : 'Create Popup'}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={handlePreviewFromForm}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview
+                </Button>
+                <Button type="submit" className="flex-1" disabled={createPopup.isPending || updatePopup.isPending}>
+                  {(createPopup.isPending || updatePopup.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {editingPopup ? 'Update' : 'Create'}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
@@ -344,6 +400,9 @@ export default function PopupManager() {
                     </span>
                   </div>
                   <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handlePreview(popup)}>
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
                     <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(popup)}>
                       <Edit className="h-3.5 w-3.5 mr-1" />
                       Edit
@@ -373,6 +432,74 @@ export default function PopupManager() {
           </Card>
         )}
       </ScrollArea>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-md p-0 overflow-hidden border-0">
+          {previewPopup && (
+            <div className={`relative bg-gradient-to-br ${getGradient(previewPopup.popup_type)}`}>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 hover:bg-background transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              {previewPopup.image_url && (
+                <div className="relative h-48 w-full">
+                  <img
+                    src={previewPopup.image_url}
+                    alt={previewPopup.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+                </div>
+              )}
+
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-background/80 shadow-sm">
+                    {getPreviewIcon(previewPopup.popup_type)}
+                  </div>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                    {previewPopup.popup_type}
+                  </span>
+                  <Badge variant="outline" className="ml-auto">Preview</Badge>
+                </div>
+
+                <h2 className="text-2xl font-bold leading-tight">
+                  {previewPopup.title}
+                </h2>
+
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {previewPopup.message}
+                </p>
+
+                <p className="text-xs text-muted-foreground">
+                  {previewPopup.show_date ? format(new Date(previewPopup.show_date), 'EEEE, MMMM d, yyyy') : 'No date set'}
+                </p>
+
+                <Button onClick={() => setShowPreview(false)} className="w-full mt-4">
+                  Got it! ✨
+                </Button>
+              </div>
+
+              {previewPopup.popup_type === 'birthday' && (
+                <>
+                  <div className="absolute top-4 left-4 text-4xl animate-bounce">🎈</div>
+                  <div className="absolute top-8 right-12 text-3xl animate-pulse">🎂</div>
+                </>
+              )}
+              {previewPopup.popup_type === 'festival' && (
+                <>
+                  <div className="absolute top-4 left-4 text-4xl animate-bounce">🎊</div>
+                  <div className="absolute top-8 right-12 text-3xl animate-pulse">✨</div>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
