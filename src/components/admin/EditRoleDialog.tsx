@@ -41,18 +41,20 @@ export function EditRoleDialog({ user, open, onOpenChange }: EditRoleDialogProps
   const queryClient = useQueryClient();
 
   const isSuperAdmin = currentUserRole === 'super_admin';
+  const isAdmin = currentUserRole === 'admin' || isSuperAdmin;
 
   // Get available roles based on current user's role
+  // Both admins and super admins can assign any role except super_admin (only super admins can assign that)
   const getAvailableRoles = () => {
     const roles = [
-      { value: 'viewer', label: 'Viewer' },
-      { value: 'member', label: 'Member' },
-      { value: 'admin', label: 'Admin' },
+      { value: 'viewer', label: 'Viewer', description: 'Can only view content' },
+      { value: 'member', label: 'Member', description: 'Can create posts and chat' },
+      { value: 'admin', label: 'Admin', description: 'Can manage content and users' },
     ];
     
     // Only super admins can assign super_admin role
     if (isSuperAdmin) {
-      roles.push({ value: 'super_admin', label: 'Super Admin' });
+      roles.push({ value: 'super_admin', label: 'Super Admin', description: 'Full access to everything' });
     }
     
     return roles;
@@ -152,7 +154,10 @@ export function EditRoleDialog({ user, open, onOpenChange }: EditRoleDialogProps
               <SelectContent>
                 {getAvailableRoles().map((role) => (
                   <SelectItem key={role.value} value={role.value}>
-                    {role.label}
+                    <div className="flex flex-col">
+                      <span>{role.label}</span>
+                      <span className="text-xs text-muted-foreground">{role.description}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -160,9 +165,12 @@ export function EditRoleDialog({ user, open, onOpenChange }: EditRoleDialogProps
             
             {!isSuperAdmin && (
               <p className="text-xs text-muted-foreground">
-                Note: Only Super Admins can assign the Super Admin role.
+                Note: Only Super Admins can assign the Super Admin role. You can assign any other role.
               </p>
             )}
+            <p className="text-xs text-primary mt-1">
+              ✓ Users can be reassigned to any role, including their previous role.
+            </p>
           </div>
 
           <div className="flex justify-end gap-3">

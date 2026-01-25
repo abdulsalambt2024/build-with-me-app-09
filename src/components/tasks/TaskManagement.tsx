@@ -26,21 +26,32 @@ export function TaskManagement() {
 
   const queryClient = useQueryClient();
 
-  const { data: members } = useQuery({
-    queryKey: ['members'],
+  // Fetch ALL users (not just members) for task assignment
+  const { data: allUsers } = useQuery({
+    queryKey: ['all-users-for-tasks'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get all profiles with their roles
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, user_id, full_name')
-        .in('user_id', (
-          await supabase
-            .from('user_roles')
-            .select('user_id')
-            .eq('role', 'member')
-        ).data?.map(r => r.user_id) || []);
+        .order('full_name');
       
-      if (error) throw error;
-      return data;
+      if (profilesError) throw profilesError;
+      
+      // Get roles for all users
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+      
+      if (rolesError) throw rolesError;
+      
+      // Combine profiles with roles and filter out viewers
+      const usersWithRoles = profiles?.map(profile => ({
+        ...profile,
+        role: roles?.find(r => r.user_id === profile.user_id)?.role || 'viewer'
+      })).filter(user => user.role !== 'viewer'); // Viewers can't be assigned tasks
+      
+      return usersWithRoles;
     }
   });
 
@@ -167,16 +178,22 @@ export function TaskManagement() {
                 <Label htmlFor="assigned_to">Assign To *</Label>
                 <Select value={formData.assigned_to} onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select member" />
+                    <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
-                    {members?.map((member) => (
-                      <SelectItem key={member.user_id} value={member.user_id}>
-                        {member.full_name || 'Unknown User'}
+                    {allUsers?.map((user) => (
+                      <SelectItem key={user.user_id} value={user.user_id}>
+                        {user.full_name || 'Unknown User'} 
+                        <span className="text-muted-foreground ml-1">
+                          ({user.role?.replace('_', ' ')})
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tasks can be assigned to members, admins, and super admins
+                </p>
               </div>
 
               <div>

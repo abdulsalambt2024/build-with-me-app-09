@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FileText, BarChart3, Settings as SettingsIcon, Bug, CreditCard, CalendarCheck, Image, Shield, Bell } from 'lucide-react';
+import { Users, FileText, BarChart3, Settings as SettingsIcon, Bug, CreditCard, CalendarCheck, Image, Shield, Bell, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TaskManagement } from '@/components/tasks/TaskManagement';
 
@@ -50,6 +50,12 @@ export default function Admin() {
       description: 'Grant verification badges (Super Admin)',
       icon: Shield,
       path: '/admin/badges',
+    },
+    {
+      title: 'PARI FAQ Management',
+      description: 'Customize chatbot knowledge base',
+      icon: MessageSquare,
+      path: '/admin/chatbot-faq',
     },
     {
       title: 'Error Logs',
