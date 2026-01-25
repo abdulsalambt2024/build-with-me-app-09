@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,32 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { X, Send, Volume2, VolumeX, Bot, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Send, Volume2, VolumeX, Bot, Sparkles, Maximize2, Minimize2, Mic, MicOff, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { chatbotMessageSchema } from '@/lib/validation';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { useChatbotHistory } from '@/hooks/useChatbotHistory';
+import { QuickReplies } from './QuickReplies';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
 
-const QUICK_REPLIES = [
-  { label: '📝 Create Post', message: 'How do I create a post?' },
-  { label: '📅 View Events', message: 'How can I view and register for events?' },
-  { label: '💬 Start Chat', message: 'How do I start a group chat?' },
-  { label: '🎨 AI Studio', message: 'What can I do in AI Studio?' },
-  { label: '🏆 Achievements', message: 'How do I earn achievements?' },
-  { label: '💰 Donations', message: 'How can I donate to campaigns?' },
-  { label: '⚙️ Settings', message: 'How do I change my settings?' },
-  { label: '👤 My Profile', message: 'How do I update my profile?' },
-];
-
 export function EnhancedChatbot() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -39,6 +30,39 @@ export function EnhancedChatbot() {
   const [isAnimating, setIsAnimating] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Use custom hooks for history and voice input
+  const { 
+    messages, 
+    setMessages, 
+    addMessage, 
+    saveConversation, 
+    clearHistory,
+    isLoadingHistory 
+  } = useChatbotHistory(user?.id);
+
+  const handleVoiceResult = useCallback((transcript: string) => {
+    setInput(transcript);
+    toast({
+      title: 'Voice captured',
+      description: `"${transcript}"`,
+    });
+  }, [toast]);
+
+  const handleVoiceError = useCallback((error: string) => {
+    toast({
+      title: 'Voice input error',
+      description: error === 'not-allowed' 
+        ? 'Please allow microphone access' 
+        : 'Could not recognize speech',
+      variant: 'destructive'
+    });
+  }, [toast]);
+
+  const { isListening, isSupported: isVoiceSupported, toggleListening } = useVoiceInput({
+    onResult: handleVoiceResult,
+    onError: handleVoiceError,
+  });
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -119,7 +143,7 @@ export function EnhancedChatbot() {
 
     const userMessage = validation.data.message;
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    addMessage({ role: 'user', content: userMessage });
     setIsLoading(true);
 
     try {
@@ -137,16 +161,11 @@ export function EnhancedChatbot() {
 
       const assistantMessage = data?.response || 'I apologize, but I encountered an issue. Please try again.';
       
-      setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+      addMessage({ role: 'assistant', content: assistantMessage });
       speakText(assistantMessage);
 
-      if (user) {
-        await supabase.from('chatbot_conversations').insert({
-          user_id: user.id,
-          message: userMessage,
-          response: assistantMessage
-        });
-      }
+      // Save to persistent history
+      await saveConversation(userMessage, assistantMessage);
     } catch (error) {
       console.error('Chatbot error:', error);
       toast({
@@ -242,6 +261,15 @@ export function EnhancedChatbot() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-white hover:bg-white/20"
+                  onClick={clearHistory}
+                  title="Clear history"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white hover:bg-white/20"
                   onClick={() => setIsFullScreen(!isFullScreen)}
                 >
                   {isFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -264,7 +292,12 @@ export function EnhancedChatbot() {
           {/* Messages */}
           <ScrollArea className="flex-1 p-3 md:p-4" ref={scrollRef}>
             <div className="space-y-3 md:space-y-4 max-w-2xl mx-auto">
-              {messages.length === 0 && (
+              {isLoadingHistory && (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground">Loading conversation history...</p>
+                </div>
+              )}
+              {!isLoadingHistory && messages.length === 0 && (
                 <div className="text-center py-8 md:py-12">
                   <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 mb-4">
                     <Bot className="h-8 w-8 md:h-10 md:w-10 text-primary" />
@@ -274,17 +307,9 @@ export function EnhancedChatbot() {
                     Your PARIVARTAN Assistant. How can I help you today?
                   </p>
                   
-                  {/* Quick Reply Buttons */}
-                  <div className="mt-4 md:mt-6 flex flex-wrap gap-2 justify-center max-w-md mx-auto">
-                    {QUICK_REPLIES.map((qr) => (
-                      <button
-                        key={qr.label}
-                        onClick={() => handleQuickReply(qr.message)}
-                        className="text-xs px-3 py-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-                      >
-                        {qr.label}
-                      </button>
-                    ))}
+                  {/* Role-based Quick Reply Buttons */}
+                  <div className="mt-4 md:mt-6">
+                    <QuickReplies role={role} onSelect={handleQuickReply} />
                   </div>
                 </div>
               )}
@@ -340,11 +365,24 @@ export function EnhancedChatbot() {
               }}
               className="flex gap-2 max-w-2xl mx-auto"
             >
+              {isVoiceSupported && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant={isListening ? "destructive" : "outline"}
+                  className={`rounded-full h-10 w-10 md:h-11 md:w-11 flex-shrink-0 ${isListening ? 'animate-pulse' : ''}`}
+                  onClick={toggleListening}
+                  disabled={isLoading}
+                  title={isListening ? 'Stop listening' : 'Start voice input'}
+                >
+                  {isListening ? <MicOff className="h-4 w-4 md:h-5 md:w-5" /> : <Mic className="h-4 w-4 md:h-5 md:w-5" />}
+                </Button>
+              )}
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask PARI anything..."
-                disabled={isLoading}
+                placeholder={isListening ? "Listening..." : "Ask PARI anything..."}
+                disabled={isLoading || isListening}
                 className="flex-1 rounded-full text-sm md:text-base h-10 md:h-11"
               />
               <Button 
