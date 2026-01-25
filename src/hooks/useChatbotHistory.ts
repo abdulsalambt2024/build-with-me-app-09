@@ -83,12 +83,52 @@ export function useChatbotHistory(userId: string | undefined) {
     }
   }, [userId]);
 
+  const exportHistory = useCallback(async () => {
+    if (!userId) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('chatbot_conversations')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) return null;
+
+      const exportData = data.map((entry: ChatHistoryEntry) => ({
+        date: new Date(entry.created_at).toLocaleString(),
+        user: entry.message,
+        pari: entry.response
+      }));
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pari-chat-history-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to export history:', error);
+      return null;
+    }
+  }, [userId]);
+
   return {
     messages,
     setMessages,
     addMessage,
     saveConversation,
     clearHistory,
+    exportHistory,
     isLoadingHistory,
   };
 }

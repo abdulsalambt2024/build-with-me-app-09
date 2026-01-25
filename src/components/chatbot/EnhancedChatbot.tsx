@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { X, Send, Volume2, VolumeX, Bot, Sparkles, Maximize2, Minimize2, Mic, MicOff, Trash2 } from 'lucide-react';
+import { X, Send, Volume2, VolumeX, Bot, Sparkles, Maximize2, Minimize2, Mic, MicOff, Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { chatbotMessageSchema } from '@/lib/validation';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
@@ -38,8 +38,25 @@ export function EnhancedChatbot() {
     addMessage, 
     saveConversation, 
     clearHistory,
+    exportHistory,
     isLoadingHistory 
   } = useChatbotHistory(user?.id);
+
+  const handleExport = async () => {
+    const result = await exportHistory();
+    if (result) {
+      toast({
+        title: 'Export successful',
+        description: 'Your chat history has been downloaded.',
+      });
+    } else {
+      toast({
+        title: 'Export failed',
+        description: 'No conversation history to export.',
+        variant: 'destructive'
+      });
+    }
+  };
 
   const handleVoiceResult = useCallback((transcript: string) => {
     setInput(transcript);
@@ -261,6 +278,15 @@ export function EnhancedChatbot() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-white hover:bg-white/20"
+                  onClick={handleExport}
+                  title="Export chat history"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white hover:bg-white/20"
                   onClick={clearHistory}
                   title="Clear history"
                 >
@@ -337,17 +363,20 @@ export function EnhancedChatbot() {
                 </div>
               ))}
               {isLoading && (
-                <div className="flex justify-start">
-                  <Avatar className="h-8 w-8 mr-2 flex-shrink-0">
+                <div className="flex justify-start items-end gap-2">
+                  <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80">
                       <Bot className="h-4 w-4 text-primary-foreground" />
                     </AvatarFallback>
                   </Avatar>
                   <div className="bg-card shadow-sm border rounded-2xl rounded-bl-sm px-4 py-3">
-                    <div className="flex gap-1.5">
-                      <span className="w-2.5 h-2.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2.5 h-2.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2.5 h-2.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground ml-1">PARI is typing...</span>
                     </div>
                   </div>
                 </div>
