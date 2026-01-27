@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +49,27 @@ interface LikeUser {
   avatar_url?: string;
 }
 
+// Memoized feed item skeleton for loading state
+const FeedItemSkeleton = memo(() => (
+  <Card className="border-0 shadow-sm">
+    <CardHeader className="pb-3">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="space-y-1.5 flex-1">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <Skeleton className="h-4 w-full mb-2" />
+      <Skeleton className="h-4 w-3/4" />
+    </CardContent>
+  </Card>
+));
+
+FeedItemSkeleton.displayName = 'FeedItemSkeleton';
+
 export function CombinedFeed() {
   const { user, role } = useAuth();
   const { toast } = useToast();
@@ -63,7 +84,7 @@ export function CombinedFeed() {
   const canEdit = role !== 'viewer';
   const isSuperAdmin = role === 'super_admin';
   const isAdmin = role === 'admin' || role === 'super_admin';
-  const pageSize = 20;
+  const pageSize = 15; // Reduced for faster initial load
 
   const { data: feedData, isLoading, refetch } = useQuery({
     queryKey: ['combined-feed', filter, page],
@@ -418,23 +439,9 @@ export function CombinedFeed() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="space-y-1.5">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-4 w-full mb-2" />
-              <Skeleton className="h-4 w-3/4" />
-            </CardContent>
-          </Card>
+          <FeedItemSkeleton key={i} />
         ))}
       </div>
     );
