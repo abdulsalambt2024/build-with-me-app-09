@@ -6,6 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error && "message" in error) {
+    return String((error as any).message);
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Unknown error";
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -67,7 +79,14 @@ serve(async (req) => {
     await supabase.from("attendance").delete().eq("user_id", userId);
 
     const { error: deleteAuthErr } = await supabase.auth.admin.deleteUser(userId);
-    if (deleteAuthErr) throw deleteAuthErr;
+    if (deleteAuthErr) {
+      // If the auth user is already gone, treat deletion as success.
+      // We already cleaned up public tables above.
+      const anyErr = deleteAuthErr as any;
+      const status = anyErr?.status;
+      const code = anyErr?.code;
+      if (!(status === 404 || code === "user_not_found")) throw deleteAuthErr;
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -75,7 +94,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in delete-user:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: getErrorMessage(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
