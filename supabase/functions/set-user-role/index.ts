@@ -69,15 +69,41 @@ serve(async (req) => {
       );
     }
 
-    // Keep exactly one active role per user (prevents privilege retention)
-    const { error: deleteErr } = await supabase.from("user_roles").delete().eq("user_id", targetUserId);
-    if (deleteErr) throw deleteErr;
-
-    const { error: insertErr } = await supabase.from("user_roles").insert({
-      user_id: targetUserId,
-      role: targetRole,
+    // Use a single SQL statement to atomically update the role
+    // This avoids race conditions between delete and insert
+    const { error: updateError } = await supabase.rpc("set_user_role_atomic", {
+      target_user_id: targetUserId,
+      new_role: targetRole,
     });
-    if (insertErr) throw insertErr;
+
+    if (updateError) {
+      // Fallback: if the RPC doesn't exist, do manual delete then insert
+      console.log("RPC not found, using fallback approach:", updateError.message);
+      
+      // First, get the existing role row ID to update it directly
+      const { data: existingRole } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", targetUserId)
+        .maybeSingle();
+
+      if (existingRole) {
+        // Update existing row
+        const { error: updateErr } = await supabase
+          .from("user_roles")
+          .update({ role: targetRole })
+          .eq("id", existingRole.id);
+        
+        if (updateErr) throw updateErr;
+      } else {
+        // Insert new row
+        const { error: insertErr } = await supabase
+          .from("user_roles")
+          .insert({ user_id: targetUserId, role: targetRole });
+        
+        if (insertErr) throw insertErr;
+      }
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
