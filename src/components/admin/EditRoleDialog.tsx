@@ -84,19 +84,12 @@ export function EditRoleDialog({ user, open, onOpenChange }: EditRoleDialogProps
 
     setIsUpdating(true);
     try {
-      // Delete existing role
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', user.user_id);
-
-      // Insert new role
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: user.user_id,
-          role: selectedRole as 'viewer' | 'member' | 'admin' | 'super_admin',
-        });
+      const { error } = await supabase.functions.invoke('set-user-role', {
+        body: {
+          userId: user.user_id,
+          role: selectedRole,
+        },
+      });
 
       if (error) throw error;
 
@@ -110,7 +103,7 @@ export function EditRoleDialog({ user, open, onOpenChange }: EditRoleDialogProps
     } catch (error: any) {
       toast({
         title: 'Failed to update role',
-        description: error.message,
+        description: error.message || 'Failed to update role',
         variant: 'destructive',
       });
     } finally {

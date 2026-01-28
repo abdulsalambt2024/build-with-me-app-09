@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Slideshow } from '@/components/home/Slideshow';
 import { CombinedFeed } from '@/components/feed/CombinedFeed';
@@ -10,8 +10,9 @@ import { useNavigate } from 'react-router-dom';
 import { CreatePostDialog } from '@/components/posts/CreatePostDialog';
 import { CreateEventDialog } from '@/components/events/CreateEventDialog';
 import { PopupDisplay } from '@/components/popup/PopupDisplay';
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 
 // Memoized stat card for better performance
 const StatCard = memo(({ icon: Icon, value, label, gradient, iconColor }: {
@@ -56,6 +57,7 @@ const StatsSkeleton = () => (
 export default function Home() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const canCreate = role !== 'viewer';
   const isAdmin = role === 'admin' || role === 'super_admin';
 
@@ -96,6 +98,14 @@ export default function Home() {
 
   const firstName = useMemo(() => profile?.full_name?.split(' ')[0] || 'User', [profile?.full_name]);
 
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['combined-feed'] }),
+      queryClient.invalidateQueries({ queryKey: ['home-stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['user-profile-name', user?.id] }),
+    ]);
+  }, [queryClient, user?.id]);
+
   const statsData = useMemo(() => [
     { icon: Users, value: stats?.members || 0, label: 'Members', gradient: 'bg-gradient-to-br from-primary/15 via-primary/5 to-transparent', iconColor: 'bg-primary' },
     { icon: Grid, value: stats?.posts || 0, label: 'Posts', gradient: 'bg-gradient-to-br from-secondary/15 via-secondary/5 to-transparent', iconColor: 'bg-secondary' },
@@ -105,6 +115,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+      <PullToRefresh onRefresh={handleRefresh} />
       <PopupDisplay />
       <div className="container max-w-6xl mx-auto px-4 py-4 space-y-6">
         {/* Welcome Section - Optimized */}
