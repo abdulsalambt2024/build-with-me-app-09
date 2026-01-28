@@ -8,6 +8,18 @@ const corsHeaders = {
 
 type AppRole = "viewer" | "member" | "admin" | "super_admin";
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error && "message" in error) {
+    return String((error as any).message);
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Unknown error";
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -72,37 +84,35 @@ serve(async (req) => {
     // Use a single SQL statement to atomically update the role
     // This avoids race conditions between delete and insert
     const { error: updateError } = await supabase.rpc("set_user_role_atomic", {
+      acting_user_id: user.id,
       target_user_id: targetUserId,
       new_role: targetRole,
     });
 
     if (updateError) {
-      // Fallback: if the RPC doesn't exist, do manual delete then insert
-      console.log("RPC not found, using fallback approach:", updateError.message);
-      
-      // First, get the existing role row ID to update it directly
-      const { data: existingRole } = await supabase
-        .from("user_roles")
-        .select("id")
-        .eq("user_id", targetUserId)
-        .maybeSingle();
+      const msg = updateError.message || "";
 
-      if (existingRole) {
-        // Update existing row
-        const { error: updateErr } = await supabase
-          .from("user_roles")
-          .update({ role: targetRole })
-          .eq("id", existingRole.id);
-        
-        if (updateErr) throw updateErr;
-      } else {
-        // Insert new row
-        const { error: insertErr } = await supabase
-          .from("user_roles")
-          .insert({ user_id: targetUserId, role: targetRole });
-        
-        if (insertErr) throw insertErr;
-      }
+      // Only fall back when the RPC truly doesn't exist.
+      // For permission/validation errors we must not bypass the RPC.
+      const rpcMissing =
+        msg.includes("Could not find the function") &&
+        msg.includes("set_user_role_atomic");
+
+      if (!rpcMissing) throw updateError;
+
+      console.log("RPC not found, using fallback approach:", msg);
+
+      // Fallback: keep exactly one active role per user
+      const { error: deleteErr } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", targetUserId);
+      if (deleteErr) throw deleteErr;
+
+      const { error: insertErr } = await supabase
+        .from("user_roles")
+        .insert({ user_id: targetUserId, role: targetRole });
+      if (insertErr) throw insertErr;
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -111,7 +121,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in set-user-role:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: getErrorMessage(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

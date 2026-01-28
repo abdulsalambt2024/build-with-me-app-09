@@ -1435,6 +1435,14 @@ export type Database = {
         Args: { _room_id: string; _user_id: string }
         Returns: boolean
       }
+      set_user_role_atomic: {
+        Args: {
+          acting_user_id: string
+          new_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "viewer" | "member" | "admin" | "super_admin"
