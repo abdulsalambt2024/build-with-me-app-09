@@ -1,4 +1,5 @@
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, memo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePosts, useDeletePost } from '@/hooks/usePosts';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, SortAsc, SortDesc, Trophy, FileText, LayoutGrid, TrendingUp, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 
 type FilterType = 'all' | 'posts' | 'achievements';
 type SortType = 'newest' | 'oldest' | 'popular';
@@ -108,8 +110,16 @@ export default function Posts() {
   const { data: achievements, isLoading: achievementsLoading } = useAchievements();
   const deletePost = useDeletePost();
   const { role, user } = useAuth();
+  const queryClient = useQueryClient();
   const canCreate = role && ['member', 'admin', 'super_admin'].includes(role);
   const isLoading = postsLoading || achievementsLoading;
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['posts'] }),
+      queryClient.invalidateQueries({ queryKey: ['achievements'] }),
+    ]);
+  }, [queryClient]);
 
   // Combine and process feed items
   const feedItems = useMemo(() => {
@@ -208,6 +218,7 @@ export default function Posts() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+      <PullToRefresh onRefresh={handleRefresh} />
       <div className="container max-w-4xl mx-auto p-4 pb-24 space-y-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

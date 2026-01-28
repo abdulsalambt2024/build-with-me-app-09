@@ -86,15 +86,14 @@ export default function UserManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete user role
-      await supabase.from('user_roles').delete().eq('user_id', userId);
-      // Delete profile
-      await supabase.from('profiles').delete().eq('user_id', userId);
-      // Note: Deleting from auth.users requires admin API or edge function
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast.success('User removed successfully');
+      toast.success('User deleted (must re-register to use the app again)');
       setDeletingUser(null);
     },
     onError: (error: any) => {
@@ -130,19 +129,21 @@ export default function UserManagement() {
 
   return (
     <div className="container max-w-7xl mx-auto p-4">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold mb-2">User Management</h1>
           <p className="text-muted-foreground">
             Manage user roles and permissions ({filteredUsers?.length || 0} users)
           </p>
         </div>
-        <AddUserDialog />
+        <div className="w-full sm:w-auto">
+          <AddUserDialog />
+        </div>
       </div>
 
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <div className="flex gap-4">
+           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -153,7 +154,7 @@ export default function UserManagement() {
               />
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px]">
+             <SelectTrigger className="w-full sm:w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
@@ -177,8 +178,8 @@ export default function UserManagement() {
         <div className="grid gap-4">
           {filteredUsers?.map((user) => (
             <Card key={user.id}>
-              <CardContent className="flex items-center justify-between p-6">
-                <div className="flex items-center gap-4">
+              <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6">
+                <div className="flex items-center gap-4 min-w-0">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={user.avatar_url || ''} />
                     <AvatarFallback>
@@ -195,7 +196,7 @@ export default function UserManagement() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <Badge variant={getRoleBadgeVariant(user.role)}>
                     {getRoleLabel(user.role)}
                   </Badge>
@@ -215,6 +216,7 @@ export default function UserManagement() {
                     variant="outline"
                     size="sm"
                     onClick={() => setEditingUser(user)}
+                    className="flex-1 sm:flex-none"
                   >
                     <UserCog className="h-4 w-4 mr-1" />
                     Edit Role
@@ -316,7 +318,7 @@ export default function UserManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove {deletingUser?.full_name}? This action cannot be undone.
+              Are you sure you want to permanently delete {deletingUser?.full_name}? They will be removed from the database and must re-register to use the app again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
