@@ -5,7 +5,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Award, Trophy, Star, Zap, Target, Medal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { memo, useMemo } from 'react';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { memo, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Memoized achievement card for performance
 const AchievementCard = memo(({ achievement }: { achievement: any }) => {
@@ -120,7 +122,12 @@ const AchievementSkeleton = () => (
 
 export default function Achievements() {
   const { user } = useAuth();
-  const { data: achievements, isLoading } = useAchievements(user?.id);
+  const queryClient = useQueryClient();
+  const { data: achievements, isLoading, refetch } = useAchievements(user?.id);
+
+  const handleRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   const stats = useMemo(() => {
     if (!achievements) return { total: 0, categories: {} };
@@ -151,44 +158,47 @@ export default function Achievements() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
-      <div className="container max-w-6xl mx-auto p-4 pb-24 space-y-6">
-        {/* Header */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg">
-              <Trophy className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold">Achievements</h1>
-              <p className="text-sm text-muted-foreground">
-                {stats.total} {stats.total === 1 ? 'badge' : 'badges'} earned
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Achievement Grid */}
-        {achievements && achievements.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {achievements.map((achievement: any) => (
-              <AchievementCard key={achievement.id} achievement={achievement} />
-            ))}
-          </div>
-        ) : (
-          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
-            <CardContent className="py-16 text-center">
-              <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
-                <Award className="h-12 w-12 text-muted-foreground" />
+    <>
+      <PullToRefresh onRefresh={handleRefresh} />
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+        <div className="container max-w-6xl mx-auto p-4 pb-24 space-y-6">
+          {/* Header */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg">
+                <Trophy className="h-6 w-6 text-white" />
               </div>
-              <h3 className="font-semibold text-lg mb-1">No achievements yet</h3>
-              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-                Keep participating in events, completing tasks, and engaging with posts to earn badges!
-              </p>
-            </CardContent>
-          </Card>
-        )}
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold">Achievements</h1>
+                <p className="text-sm text-muted-foreground">
+                  {stats.total} {stats.total === 1 ? 'badge' : 'badges'} earned
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Achievement Grid */}
+          {achievements && achievements.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {achievements.map((achievement: any) => (
+                <AchievementCard key={achievement.id} achievement={achievement} />
+              ))}
+            </div>
+          ) : (
+            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+              <CardContent className="py-16 text-center">
+                <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                  <Award className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg mb-1">No achievements yet</h3>
+                <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                  Keep participating in events, completing tasks, and engaging with posts to earn badges!
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

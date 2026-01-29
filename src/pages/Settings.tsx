@@ -5,8 +5,10 @@ import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme, ColorScheme } from '@/contexts/ColorSchemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Moon, Sun, Monitor, Bell, Lock, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi } from 'lucide-react';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { Moon, Sun, Monitor, Bell, Lock, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi, BellRing } from 'lucide-react';
 import { TwoFactorAuth } from '@/components/settings/TwoFactorAuth';
+import { PPINSetup } from '@/components/settings/PPINSetup';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -48,6 +50,8 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { colorScheme, setColorScheme } = useColorScheme();
   const { role } = useAuth();
+  const { isSupported, isSubscribed, permission, subscribe, unsubscribe } = usePushNotifications();
+  
   const [notifications, setNotifications] = useState({
     posts: true,
     events: true,
@@ -64,6 +68,7 @@ export default function Settings() {
   });
 
   const canUse2FA = role !== 'viewer';
+  const canUsePPIN = role !== 'viewer';
 
   const handleNotificationChange = (key: string, value: boolean) => {
     setNotifications(prev => ({ ...prev, [key]: value }));
@@ -78,6 +83,14 @@ export default function Settings() {
   const handleColorSchemeChange = (scheme: ColorScheme) => {
     setColorScheme(scheme);
     toast.success(`Theme color changed to ${scheme}`);
+  };
+
+  const handlePushToggle = async () => {
+    if (isSubscribed) {
+      await unsubscribe();
+    } else {
+      await subscribe();
+    }
   };
 
   return (
@@ -173,6 +186,50 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Push Notifications Section */}
+        {isSupported && (
+          <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+            <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 to-transparent">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/10">
+                  <BellRing className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Push Notifications</CardTitle>
+                  <CardDescription className="text-xs">
+                    {permission === 'denied' 
+                      ? 'Blocked in browser settings' 
+                      : 'Receive notifications even when app is closed'}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Enable Push Notifications</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {isSubscribed ? 'You will receive push notifications' : 'Turn on to stay updated'}
+                  </p>
+                </div>
+                <Switch
+                  checked={isSubscribed}
+                  onCheckedChange={handlePushToggle}
+                  disabled={permission === 'denied'}
+                />
+              </div>
+              {permission === 'denied' && (
+                <p className="text-xs text-destructive mt-2">
+                  Notifications are blocked. Please enable them in your browser settings.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* PPIN Section */}
+        {canUsePPIN && <PPINSetup />}
+
         {/* 2FA Section */}
         {canUse2FA && <TwoFactorAuth />}
 
@@ -184,7 +241,7 @@ export default function Settings() {
                 <Bell className="h-5 w-5 text-secondary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Notifications</CardTitle>
+                <CardTitle className="text-lg">In-App Notifications</CardTitle>
                 <CardDescription className="text-xs">Control what notifications you receive</CardDescription>
               </div>
             </div>

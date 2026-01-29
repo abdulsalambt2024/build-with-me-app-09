@@ -1,29 +1,18 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useState } from 'react';
-import { Search, Trash2, Eye, UserCog, Filter } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { useUsersPaginated } from '@/hooks/useUsersPaginated';
+import { UserWithRole } from '@/components/admin/users/UserCard';
+import { UserList } from '@/components/admin/users/UserList';
+import { UserSearchFilters } from '@/components/admin/users/UserSearchFilters';
+import { UserDetailsDialog } from '@/components/admin/users/UserDetailsDialog';
+import { DisableUserDialog } from '@/components/admin/users/DisableUserDialog';
 import { EditRoleDialog } from '@/components/admin/EditRoleDialog';
 import { AddUserDialog } from '@/components/admin/AddUserDialog';
+import { AuditLogPanel } from '@/components/admin/AuditLogPanel';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,55 +23,41 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-interface UserWithRole {
-  id: string;
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  created_at: string;
-  role: 'viewer' | 'member' | 'admin' | 'super_admin';
-  bio?: string | null;
-  course?: string | null;
-  branch?: string | null;
-  roll_number?: string | null;
-  year?: string | null;
-  semester?: string | null;
-  father_name?: string | null;
-  date_of_birth?: string | null;
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function UserManagement() {
-  const { role: currentUserRole } = useAuth();
+  const { role: currentUserRole, user: currentUser } = useAuth();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Get params from URL
+  const searchQuery = searchParams.get('search') || '';
+  const roleFilter = searchParams.get('role') || 'all';
+  const page = parseInt(searchParams.get('page') || '1', 10);
+
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [viewingUser, setViewingUser] = useState<UserWithRole | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserWithRole | null>(null);
+  const [disablingUser, setDisablingUser] = useState<UserWithRole | null>(null);
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['admin-users'],
-    queryFn: async () => {
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) throw rolesError;
-
-      return profiles.map(profile => ({
-        ...profile,
-        role: roles.find(r => r.user_id === profile.user_id)?.role || 'viewer'
-      })) as UserWithRole[];
-    },
+  const { data, isLoading } = useUsersPaginated({
+    search: searchQuery,
+    roleFilter,
+    page,
   });
+
+  // Update URL params
+  const updateParams = useCallback((updates: Record<string, string | null>) => {
+    const newParams = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === '' || (key === 'page' && value === '1') || (key === 'role' && value === 'all')) {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value);
+      }
+    });
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -92,38 +67,36 @@ export default function UserManagement() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast.success('User deleted (must re-register to use the app again)');
+      queryClient.invalidateQueries({ queryKey: ['admin-users-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
+      toast.success('User deleted permanently');
       setDeletingUser(null);
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to remove user');
-    }
+    },
   });
 
-  const filteredUsers = users?.filter(user => {
-    const matchesSearch = user.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
+  const toggleDisableMutation = useMutation({
+    mutationFn: async ({ userId, disable, reason }: { userId: string; disable: boolean; reason: string }) => {
+      const { error } = await supabase.rpc('toggle_user_disabled', {
+        p_actor_id: currentUser?.id,
+        p_target_id: userId,
+        p_disable: disable,
+        p_reason: reason || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
+      toast.success(variables.disable ? 'User account disabled' : 'User account enabled');
+      setDisablingUser(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update user status');
+    },
   });
-
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'super_admin': return 'destructive';
-      case 'admin': return 'default';
-      case 'member': return 'secondary';
-      default: return 'outline';
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'super_admin': return 'Super Admin';
-      case 'admin': return 'Admin';
-      case 'member': return 'Member';
-      default: return 'Viewer';
-    }
-  };
 
   const isSuperAdmin = currentUserRole === 'super_admin';
 
@@ -133,7 +106,7 @@ export default function UserManagement() {
         <div>
           <h1 className="text-3xl font-bold mb-2">User Management</h1>
           <p className="text-muted-foreground">
-            Manage user roles and permissions ({filteredUsers?.length || 0} users)
+            Manage user roles and permissions ({data?.totalCount || 0} users)
           </p>
         </div>
         <div className="w-full sm:w-auto">
@@ -141,105 +114,43 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search users..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-             <SelectTrigger className="w-full sm:w-[180px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="viewer">Viewers</SelectItem>
-                <SelectItem value="member">Members</SelectItem>
-                <SelectItem value="admin">Admins</SelectItem>
-                <SelectItem value="super_admin">Super Admins</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="users" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          {isSuperAdmin && <TabsTrigger value="audit">Audit Log</TabsTrigger>}
+        </TabsList>
 
-      {isLoading ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading users...</p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {filteredUsers?.map((user) => (
-            <Card key={user.id}>
-              <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6">
-                <div className="flex items-center gap-4 min-w-0">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={user.avatar_url || ''} />
-                    <AvatarFallback>
-                      {user.full_name?.[0] || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold">{user.full_name || 'Unknown User'}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {user.course && user.branch ? `${user.course} - ${user.branch}` : 'Joined ' + new Date(user.created_at).toLocaleDateString()}
-                    </p>
-                    {user.roll_number && (
-                      <p className="text-xs text-muted-foreground">Roll: {user.roll_number}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <Badge variant={getRoleBadgeVariant(user.role)}>
-                    {getRoleLabel(user.role)}
-                  </Badge>
-                  
-                  {isSuperAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setViewingUser(user)}
-                      title="View Details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  )}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditingUser(user)}
-                    className="flex-1 sm:flex-none"
-                  >
-                    <UserCog className="h-4 w-4 mr-1" />
-                    Edit Role
-                  </Button>
-                  
-                  {isSuperAdmin && user.role !== 'super_admin' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setDeletingUser(user)}
-                      title="Remove User"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+        <TabsContent value="users" className="space-y-6">
+          <UserSearchFilters
+            searchQuery={searchQuery}
+            onSearchChange={(value) => updateParams({ search: value, page: '1' })}
+            roleFilter={roleFilter}
+            onRoleFilterChange={(value) => updateParams({ role: value, page: '1' })}
+          />
 
+          <UserList
+            users={data?.users}
+            isLoading={isLoading}
+            isSuperAdmin={isSuperAdmin}
+            onView={setViewingUser}
+            onEdit={setEditingUser}
+            onDelete={setDeletingUser}
+            onToggleDisable={setDisablingUser}
+            page={page}
+            totalPages={data?.totalPages || 1}
+            onPageChange={(newPage) => updateParams({ page: String(newPage) })}
+            totalCount={data?.totalCount || 0}
+          />
+        </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="audit">
+            <AuditLogPanel />
+          </TabsContent>
+        )}
+      </Tabs>
+
+      {/* Dialogs */}
       {editingUser && (
         <EditRoleDialog
           user={editingUser}
@@ -248,77 +159,36 @@ export default function UserManagement() {
         />
       )}
 
-      {/* Profile Details Dialog (Super Admin Only) */}
-      <Dialog open={!!viewingUser} onOpenChange={(open) => !open && setViewingUser(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>User Profile Details</DialogTitle>
-          </DialogHeader>
-          {viewingUser && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={viewingUser.avatar_url || ''} />
-                  <AvatarFallback>{viewingUser.full_name?.[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-lg">{viewingUser.full_name}</h3>
-                  <Badge variant={getRoleBadgeVariant(viewingUser.role)}>
-                    {getRoleLabel(viewingUser.role)}
-                  </Badge>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Course</p>
-                  <p className="font-medium">{viewingUser.course || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Branch</p>
-                  <p className="font-medium">{viewingUser.branch || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Roll Number</p>
-                  <p className="font-medium">{viewingUser.roll_number || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Year</p>
-                  <p className="font-medium">{viewingUser.year || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Semester</p>
-                  <p className="font-medium">{viewingUser.semester || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Date of Birth</p>
-                  <p className="font-medium">{viewingUser.date_of_birth || '-'}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-muted-foreground">Father's Name</p>
-                  <p className="font-medium">{viewingUser.father_name || '-'}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-muted-foreground">Bio</p>
-                  <p className="font-medium">{viewingUser.bio || '-'}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-muted-foreground">Joined</p>
-                  <p className="font-medium">{new Date(viewingUser.created_at).toLocaleDateString()}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <UserDetailsDialog
+        user={viewingUser}
+        open={!!viewingUser}
+        onOpenChange={(open) => !open && setViewingUser(null)}
+      />
 
-      {/* Delete Confirmation Dialog */}
+      <DisableUserDialog
+        user={disablingUser}
+        open={!!disablingUser}
+        onOpenChange={(open) => !open && setDisablingUser(null)}
+        onConfirm={(reason) => {
+          if (disablingUser) {
+            toggleDisableMutation.mutate({
+              userId: disablingUser.user_id,
+              disable: !disablingUser.is_disabled,
+              reason,
+            });
+          }
+        }}
+        isPending={toggleDisableMutation.isPending}
+      />
+
       <AlertDialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove User</AlertDialogTitle>
+            <AlertDialogTitle>Remove User Permanently</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete {deletingUser?.full_name}? They will be removed from the database and must re-register to use the app again.
+              Are you sure you want to permanently delete {deletingUser?.full_name}? 
+              This action cannot be undone. They will be removed from the database 
+              and must re-register to use the app again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

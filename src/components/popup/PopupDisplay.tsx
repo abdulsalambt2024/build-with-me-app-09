@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Gift, PartyPopper, Bell, X, Sparkles } from 'lucide-react';
+import { Gift, PartyPopper, Bell, X, Sparkles, Pause, Play } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface Popup {
   id: string;
@@ -15,13 +16,16 @@ interface Popup {
   popup_type: string;
   show_date: string;
   is_active: boolean;
+  is_paused: boolean;
 }
 
 export function PopupDisplay() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const queryClient = useQueryClient();
   const [currentPopup, setCurrentPopup] = useState<Popup | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+
+  const isSuperAdmin = role === 'super_admin';
 
   // Fetch active popups that should be shown now
   const { data: activePopups } = useQuery({
@@ -31,11 +35,12 @@ export function PopupDisplay() {
       
       const now = new Date().toISOString();
       
-      // Get active popups where show_date is today or past
+      // Get active popups where show_date is today or past, and not paused
       const { data: popups, error: popupsError } = await supabase
         .from('popups')
         .select('*')
         .eq('is_active', true)
+        .eq('is_paused', false)
         .lte('show_date', now)
         .order('show_date', { ascending: false });
       
@@ -56,7 +61,7 @@ export function PopupDisplay() {
     },
     enabled: !!user?.id,
     refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5 // 5 minutes
+    staleTime: 1000 * 60 * 5
   });
 
   // Mark popup as viewed
@@ -78,6 +83,29 @@ export function PopupDisplay() {
     }
   });
 
+  // Pause popup (Super Admin only)
+  const pausePopup = useMutation({
+    mutationFn: async (popupId: string) => {
+      if (!user?.id) return;
+      
+      const { error } = await supabase
+        .from('popups')
+        .update({
+          is_paused: true,
+          paused_by: user.id,
+          paused_at: new Date().toISOString()
+        })
+        .eq('id', popupId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['active-popups'] });
+      toast.success('Popup paused for all users');
+      handleClose();
+    }
+  });
+
   // Show the first unviewed popup
   useEffect(() => {
     if (activePopups && activePopups.length > 0 && !currentPopup) {
@@ -86,13 +114,19 @@ export function PopupDisplay() {
     }
   }, [activePopups, currentPopup]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (currentPopup) {
       markViewed.mutate(currentPopup.id);
     }
     setIsOpen(false);
     setCurrentPopup(null);
-  };
+  }, [currentPopup, markViewed]);
+
+  const handlePause = useCallback(() => {
+    if (currentPopup) {
+      pausePopup.mutate(currentPopup.id);
+    }
+  }, [currentPopup, pausePopup]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -126,13 +160,24 @@ export function PopupDisplay() {
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-md p-0 overflow-hidden border-0">
         <div className={`relative bg-gradient-to-br ${getGradient(currentPopup.popup_type)}`}>
-          {/* Close button */}
-          <button
-            onClick={handleClose}
-            className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 hover:bg-background transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {/* Action buttons */}
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+            {isSuperAdmin && (
+              <button
+                onClick={handlePause}
+                className="p-1.5 rounded-full bg-amber-500/80 hover:bg-amber-500 transition-colors text-white"
+                title="Pause for all users"
+              >
+                <Pause className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              onClick={handleClose}
+              className="p-1.5 rounded-full bg-background/80 hover:bg-background transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
           {/* Image */}
           {currentPopup.image_url && (
@@ -148,7 +193,6 @@ export function PopupDisplay() {
 
           {/* Content */}
           <div className="p-6 space-y-4">
-            {/* Icon and type badge */}
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-full bg-background/80 shadow-sm">
                 {getTypeIcon(currentPopup.popup_type)}
@@ -158,22 +202,18 @@ export function PopupDisplay() {
               </span>
             </div>
 
-            {/* Title */}
             <h2 className="text-2xl font-bold leading-tight">
               {currentPopup.title}
             </h2>
 
-            {/* Message */}
             <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
               {currentPopup.message}
             </p>
 
-            {/* Date */}
             <p className="text-xs text-muted-foreground">
               {format(new Date(currentPopup.show_date), 'EEEE, MMMM d, yyyy')}
             </p>
 
-            {/* Action button */}
             <Button onClick={handleClose} className="w-full mt-4">
               Got it! ✨
             </Button>
