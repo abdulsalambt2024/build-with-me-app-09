@@ -136,7 +136,18 @@ export function TaskManagement() {
     createTask.mutate(formData);
   };
 
+  const canCreateTasks = role && role !== 'viewer';
   const canDeleteTasks = role === 'admin' || role === 'super_admin';
+
+  if (!canCreateTasks) {
+    return (
+      <Card className="p-8 text-center">
+        <p className="text-muted-foreground">
+          Only members, admins, and super admins can manage tasks.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

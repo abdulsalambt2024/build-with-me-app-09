@@ -99,6 +99,8 @@ export function EditRoleDialog({ user, open, onOpenChange }: EditRoleDialogProps
       });
 
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
       onOpenChange(false);
     } catch (error: any) {
       toast({

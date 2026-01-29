@@ -220,6 +220,48 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action_type: string
+          actor_id: string | null
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          new_value: Json | null
+          old_value: Json | null
+          target_id: string | null
+          target_type: string
+          user_agent: string | null
+        }
+        Insert: {
+          action_type: string
+          actor_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          target_id?: string | null
+          target_type: string
+          user_agent?: string | null
+        }
+        Update: {
+          action_type?: string
+          actor_id?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          target_id?: string | null
+          target_type?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           amount_presets: number[] | null
@@ -988,7 +1030,10 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          is_paused: boolean
           message: string
+          paused_at: string | null
+          paused_by: string | null
           popup_type: string
           show_date: string
           title: string
@@ -1000,7 +1045,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_paused?: boolean
           message: string
+          paused_at?: string | null
+          paused_by?: string | null
           popup_type: string
           show_date: string
           title: string
@@ -1012,7 +1060,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_paused?: boolean
           message?: string
+          paused_at?: string | null
+          paused_by?: string | null
           popup_type?: string
           show_date?: string
           title?: string
@@ -1102,9 +1153,13 @@ export type Database = {
           course: string | null
           created_at: string
           date_of_birth: string | null
+          disabled_at: string | null
+          disabled_by: string | null
+          disabled_reason: string | null
           father_name: string | null
           full_name: string | null
           id: string
+          is_disabled: boolean
           role: string | null
           roll_number: string | null
           semester: string | null
@@ -1119,9 +1174,13 @@ export type Database = {
           course?: string | null
           created_at?: string
           date_of_birth?: string | null
+          disabled_at?: string | null
+          disabled_by?: string | null
+          disabled_reason?: string | null
           father_name?: string | null
           full_name?: string | null
           id?: string
+          is_disabled?: boolean
           role?: string | null
           roll_number?: string | null
           semester?: string | null
@@ -1136,9 +1195,13 @@ export type Database = {
           course?: string | null
           created_at?: string
           date_of_birth?: string | null
+          disabled_at?: string | null
+          disabled_by?: string | null
+          disabled_reason?: string | null
           father_name?: string | null
           full_name?: string | null
           id?: string
+          is_disabled?: boolean
           role?: string | null
           roll_number?: string | null
           semester?: string | null
@@ -1354,6 +1417,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ppin: {
+        Row: {
+          created_at: string | null
+          failed_attempts: number
+          id: string
+          is_enabled: boolean
+          locked_until: string | null
+          ppin_hash: string
+          updated_at: string | null
+          use_for_login: boolean
+          use_for_sensitive_actions: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          failed_attempts?: number
+          id?: string
+          is_enabled?: boolean
+          locked_until?: string | null
+          ppin_hash: string
+          updated_at?: string | null
+          use_for_login?: boolean
+          use_for_sensitive_actions?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          failed_attempts?: number
+          id?: string
+          is_enabled?: boolean
+          locked_until?: string | null
+          ppin_hash?: string
+          updated_at?: string | null
+          use_for_login?: boolean
+          use_for_sensitive_actions?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1435,11 +1537,58 @@ export type Database = {
         Args: { _room_id: string; _user_id: string }
         Returns: boolean
       }
+      log_audit_event: {
+        Args: {
+          p_action_type: string
+          p_actor_id: string
+          p_metadata?: Json
+          p_new_value?: Json
+          p_old_value?: Json
+          p_target_id?: string
+          p_target_type: string
+        }
+        Returns: string
+      }
+      search_users_paginated: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_role_filter?: string
+          p_search?: string
+        }
+        Returns: {
+          avatar_url: string
+          bio: string
+          branch: string
+          course: string
+          created_at: string
+          date_of_birth: string
+          father_name: string
+          full_name: string
+          id: string
+          is_disabled: boolean
+          role: string
+          roll_number: string
+          semester: string
+          total_count: number
+          user_id: string
+          year: string
+        }[]
+      }
       set_user_role_atomic: {
         Args: {
           acting_user_id: string
           new_role: Database["public"]["Enums"]["app_role"]
           target_user_id: string
+        }
+        Returns: undefined
+      }
+      toggle_user_disabled: {
+        Args: {
+          p_actor_id: string
+          p_disable: boolean
+          p_reason?: string
+          p_target_id: string
         }
         Returns: undefined
       }
