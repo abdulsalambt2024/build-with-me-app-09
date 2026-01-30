@@ -26,7 +26,15 @@ export function TaskManagement() {
 
   const queryClient = useQueryClient();
 
-  // Fetch ALL users (not just members) for task assignment
+  // Role priority for sorting (higher = more important)
+  const rolePriority: Record<string, number> = {
+    'super_admin': 4,
+    'admin': 3,
+    'member': 2,
+    'viewer': 1
+  };
+
+  // Fetch ALL users (not just members) for task assignment, sorted by role
   const { data: allUsers } = useQuery({
     queryKey: ['all-users-for-tasks'],
     queryFn: async () => {
@@ -50,6 +58,17 @@ export function TaskManagement() {
         ...profile,
         role: roles?.find(r => r.user_id === profile.user_id)?.role || 'viewer'
       })).filter(user => user.role !== 'viewer'); // Viewers can't be assigned tasks
+      
+      // Sort by role priority (super_admin first, then admin, then member)
+      usersWithRoles?.sort((a, b) => {
+        const priorityA = rolePriority[a.role] || 0;
+        const priorityB = rolePriority[b.role] || 0;
+        if (priorityB !== priorityA) {
+          return priorityB - priorityA; // Higher priority first
+        }
+        // Same role - sort alphabetically by name
+        return (a.full_name || '').localeCompare(b.full_name || '');
+      });
       
       return usersWithRoles;
     }

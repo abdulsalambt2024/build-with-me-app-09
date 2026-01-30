@@ -40,13 +40,28 @@ export function PPINSetup() {
     enabled: !!user?.id,
   });
 
+  // Check if 2FA is enabled (mutual exclusivity)
+  const { data: twoFactorEnabled } = useQuery({
+    queryKey: ['2fa-status', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_2fa')
+        .select('enabled')
+        .eq('user_id', user?.id)
+        .single();
+      if (error && error.code !== 'PGRST116') return false;
+      return data?.enabled || false;
+    },
+    enabled: !!user?.id
+  });
+
   const setupPpinMutation = useMutation({
     mutationFn: async (newPpin: string) => {
       if (!user?.id) throw new Error('Not authenticated');
       
-      // Simple hash for demo (in production, use bcrypt on server)
+      // Hash PPIN using SHA-256 (same as edge function)
       const encoder = new TextEncoder();
-      const data = encoder.encode(newPpin + user.id);
+      const data = encoder.encode(newPpin);
       const hashBuffer = await crypto.subtle.digest('SHA-256', data);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -57,6 +72,7 @@ export function PPINSetup() {
           user_id: user.id,
           ppin_hash: hashHex,
           is_enabled: true,
+          use_for_login: true, // Default to using for login
         });
 
       if (error) throw error;
@@ -77,6 +93,12 @@ export function PPINSetup() {
   const toggleSettingMutation = useMutation({
     mutationFn: async ({ field, value }: { field: string; value: boolean }) => {
       if (!user?.id) throw new Error('Not authenticated');
+      
+      // Check mutual exclusivity for login use
+      if (field === 'use_for_login' && value && twoFactorEnabled) {
+        throw new Error('Please disable 2FA first. Only one login verification method can be active at a time.');
+      }
+      
       const { error } = await supabase
         .from('user_ppin')
         .update({ [field]: value, updated_at: new Date().toISOString() })
@@ -86,6 +108,9 @@ export function PPINSetup() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ppin-settings'] });
     },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update setting');
+    }
   });
 
   const handlePpinEntered = () => {
