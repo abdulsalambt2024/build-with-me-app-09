@@ -37,6 +37,23 @@ export function TwoFactorAuth() {
     enabled: !!user?.id
   });
 
+  // Check if PPIN is enabled for login (mutual exclusivity)
+  const { data: ppinSettings } = useQuery({
+    queryKey: ['ppin-settings', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_ppin')
+        .select('is_enabled, use_for_login')
+        .eq('user_id', user?.id)
+        .single();
+      if (error && error.code !== 'PGRST116') return null;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
+  const ppinActiveForLogin = ppinSettings?.is_enabled && ppinSettings?.use_for_login;
+
   const setupMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('setup-2fa', {
@@ -100,6 +117,10 @@ export function TwoFactorAuth() {
 
   const handleToggle = (enabled: boolean) => {
     if (enabled) {
+      if (ppinActiveForLogin) {
+        toast.error('Please disable PPIN for login first. Only one verification method can be active at a time.');
+        return;
+      }
       setupMutation.mutate();
     } else {
       setShowDisable(true);

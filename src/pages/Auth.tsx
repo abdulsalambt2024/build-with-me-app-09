@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
+import { PostLoginVerification } from '@/components/auth/PostLoginVerification';
+
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -16,16 +18,21 @@ export default function Auth() {
     signIn,
     signUp,
     resetPassword,
-    user
+    user,
+    requiresVerification,
+    pendingVerificationUserId,
+    completeVerification,
+    cancelVerification
   } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user) {
+    if (user && !requiresVerification) {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, requiresVerification, navigate]);
+
   const [loginForm, setLoginForm] = useState({
     email: '',
     password: ''
@@ -37,6 +44,7 @@ export default function Auth() {
     fullName: ''
   });
   const [resetEmail, setResetEmail] = useState('');
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginForm.email || !loginForm.password) {
@@ -60,6 +68,7 @@ export default function Auth() {
     }
     setIsLoading(false);
   };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signupForm.email || !signupForm.password || !signupForm.fullName) {
@@ -99,6 +108,7 @@ export default function Auth() {
     }
     setIsLoading(false);
   };
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetEmail) {
@@ -122,12 +132,23 @@ export default function Auth() {
     }
     setIsLoading(false);
   };
-  return <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
+
+  // Show post-login verification screen if required
+  if (requiresVerification && pendingVerificationUserId) {
+    return (
+      <PostLoginVerification
+        userId={pendingVerificationUserId}
+        onVerified={completeVerification}
+        onCancel={cancelVerification}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-2xl font-bold text-muted-foreground">         ENLIGHTEN A CHILD,          DISCOVER A PERSONALITY.</CardTitle>
-          
-          
+          <CardTitle className="text-2xl font-bold text-muted-foreground">         ENLIGHTEN A CHILD,          DISCOVER A PERSONALITY.</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
@@ -227,5 +248,6 @@ export default function Auth() {
           </div>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 }
