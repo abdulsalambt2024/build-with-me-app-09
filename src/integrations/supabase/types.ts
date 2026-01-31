@@ -1417,6 +1417,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_biometric: {
+        Row: {
+          counter: number
+          created_at: string | null
+          credential_id: string
+          device_name: string | null
+          id: string
+          is_enabled: boolean
+          last_used_at: string | null
+          public_key: string
+          user_id: string
+        }
+        Insert: {
+          counter?: number
+          created_at?: string | null
+          credential_id: string
+          device_name?: string | null
+          id?: string
+          is_enabled?: boolean
+          last_used_at?: string | null
+          public_key: string
+          user_id: string
+        }
+        Update: {
+          counter?: number
+          created_at?: string | null
+          credential_id?: string
+          device_name?: string | null
+          id?: string
+          is_enabled?: boolean
+          last_used_at?: string | null
+          public_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_ppin: {
         Row: {
           created_at: string | null

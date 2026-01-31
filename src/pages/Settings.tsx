@@ -6,9 +6,10 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme, ColorScheme } from '@/contexts/ColorSchemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { Moon, Sun, Monitor, Bell, Lock, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi, BellRing } from 'lucide-react';
+import { Moon, Sun, Monitor, Bell, Lock, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi, BellRing, Fingerprint } from 'lucide-react';
 import { TwoFactorAuth } from '@/components/settings/TwoFactorAuth';
 import { PPINSetup } from '@/components/settings/PPINSetup';
+import { BiometricSetup } from '@/components/settings/BiometricSetup';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -232,6 +233,9 @@ export default function Settings() {
 
         {/* 2FA Section */}
         {canUse2FA && <TwoFactorAuth />}
+
+        {/* Biometric Section */}
+        <BiometricSetup />
 
         {/* Notifications Section */}
         <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
