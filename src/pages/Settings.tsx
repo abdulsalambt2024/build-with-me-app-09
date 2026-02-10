@@ -6,10 +6,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme, ColorScheme } from '@/contexts/ColorSchemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { Moon, Sun, Monitor, Bell, Lock, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi, BellRing, Fingerprint } from 'lucide-react';
+import { Moon, Sun, Monitor, Bell, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi, BellRing } from 'lucide-react';
 import { TwoFactorAuth } from '@/components/settings/TwoFactorAuth';
-import { PPINSetup } from '@/components/settings/PPINSetup';
-import { BiometricSetup } from '@/components/settings/BiometricSetup';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -54,22 +52,13 @@ export default function Settings() {
   const { isSupported, isSubscribed, permission, subscribe, unsubscribe } = usePushNotifications();
   
   const [notifications, setNotifications] = useState({
-    posts: true,
-    events: true,
-    tasks: true,
-    achievements: true,
-    chat: true,
-    announcements: true,
+    posts: true, events: true, tasks: true, achievements: true, chat: true, announcements: true,
   });
   const [privacy, setPrivacy] = useState({
-    profileVisible: true,
-    showEmail: false,
-    showActivity: true,
-    showOnlineStatus: true,
+    profileVisible: true, showEmail: false, showActivity: true, showOnlineStatus: true,
   });
 
   const canUse2FA = role !== 'viewer';
-  const canUsePPIN = role !== 'viewer';
 
   const handleNotificationChange = (key: string, value: boolean) => {
     setNotifications(prev => ({ ...prev, [key]: value }));
@@ -87,17 +76,13 @@ export default function Settings() {
   };
 
   const handlePushToggle = async () => {
-    if (isSubscribed) {
-      await unsubscribe();
-    } else {
-      await subscribe();
-    }
+    if (isSubscribed) await unsubscribe();
+    else await subscribe();
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
       <div className="container max-w-2xl mx-auto p-4 pb-24 space-y-6">
-        {/* Header */}
         <div className="space-y-1 pt-2">
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
           <p className="text-muted-foreground text-sm">Personalize your Parivartan experience</p>
@@ -117,7 +102,6 @@ export default function Settings() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Theme Mode */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Theme Mode</Label>
               <div className="grid grid-cols-3 gap-3">
@@ -137,10 +121,7 @@ export default function Settings() {
                         <Check className="h-3 w-3 text-primary-foreground" />
                       </div>
                     )}
-                    <div className={cn(
-                      'p-2.5 rounded-lg transition-colors',
-                      theme === t.id ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/10'
-                    )}>
+                    <div className={cn('p-2.5 rounded-lg transition-colors', theme === t.id ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/10')}>
                       <t.icon className="h-5 w-5" />
                     </div>
                     <div className="text-center">
@@ -152,7 +133,6 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Color Scheme */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Accent Color</Label>
               <div className="grid grid-cols-4 gap-2">
@@ -167,12 +147,7 @@ export default function Settings() {
                         : 'border-transparent hover:border-muted-foreground/20 hover:scale-[1.02]'
                     )}
                   >
-                    <div 
-                      className={cn(
-                        'w-10 h-10 rounded-full bg-gradient-to-br shadow-lg transition-transform group-hover:scale-110',
-                        c.gradient
-                      )}
-                    >
+                    <div className={cn('w-10 h-10 rounded-full bg-gradient-to-br shadow-lg transition-transform group-hover:scale-110', c.gradient)}>
                       {colorScheme === c.id && (
                         <div className="w-full h-full flex items-center justify-center">
                           <Check className="h-5 w-5 text-white drop-shadow" />
@@ -187,7 +162,7 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Push Notifications Section */}
+        {/* Push Notifications */}
         {isSupported && (
           <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 to-transparent">
@@ -198,9 +173,7 @@ export default function Settings() {
                 <div>
                   <CardTitle className="text-lg">Push Notifications</CardTitle>
                   <CardDescription className="text-xs">
-                    {permission === 'denied' 
-                      ? 'Blocked in browser settings' 
-                      : 'Receive notifications even when app is closed'}
+                    {permission === 'denied' ? 'Blocked in browser settings' : 'Receive notifications even when app is closed'}
                   </CardDescription>
                 </div>
               </div>
@@ -213,31 +186,16 @@ export default function Settings() {
                     {isSubscribed ? 'You will receive push notifications' : 'Turn on to stay updated'}
                   </p>
                 </div>
-                <Switch
-                  checked={isSubscribed}
-                  onCheckedChange={handlePushToggle}
-                  disabled={permission === 'denied'}
-                />
+                <Switch checked={isSubscribed} onCheckedChange={handlePushToggle} disabled={permission === 'denied'} />
               </div>
-              {permission === 'denied' && (
-                <p className="text-xs text-destructive mt-2">
-                  Notifications are blocked. Please enable them in your browser settings.
-                </p>
-              )}
             </CardContent>
           </Card>
         )}
 
-        {/* PPIN Section */}
-        {canUsePPIN && <PPINSetup />}
-
         {/* 2FA Section */}
         {canUse2FA && <TwoFactorAuth />}
 
-        {/* Biometric Section */}
-        <BiometricSetup />
-
-        {/* Notifications Section */}
+        {/* Notifications */}
         <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader className="pb-4 bg-gradient-to-r from-secondary/5 to-transparent">
             <div className="flex items-center gap-3">
@@ -255,25 +213,20 @@ export default function Settings() {
               {notificationItems.map(item => (
                 <div key={item.key} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <item.icon className="h-4 w-4 text-muted-foreground" />
-                    </div>
+                    <div className="p-2 rounded-lg bg-muted"><item.icon className="h-4 w-4 text-muted-foreground" /></div>
                     <div>
                       <Label className="text-sm font-medium cursor-pointer">{item.label}</Label>
                       <p className="text-xs text-muted-foreground">{item.description}</p>
                     </div>
                   </div>
-                  <Switch
-                    checked={notifications[item.key as keyof typeof notifications]}
-                    onCheckedChange={(checked) => handleNotificationChange(item.key, checked)}
-                  />
+                  <Switch checked={notifications[item.key as keyof typeof notifications]} onCheckedChange={(checked) => handleNotificationChange(item.key, checked)} />
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Privacy Section */}
+        {/* Privacy */}
         <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader className="pb-4 bg-gradient-to-r from-destructive/5 to-transparent">
             <div className="flex items-center gap-3">
@@ -291,25 +244,19 @@ export default function Settings() {
               {privacyItems.map(item => (
                 <div key={item.key} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <item.icon className="h-4 w-4 text-muted-foreground" />
-                    </div>
+                    <div className="p-2 rounded-lg bg-muted"><item.icon className="h-4 w-4 text-muted-foreground" /></div>
                     <div>
                       <Label className="text-sm font-medium cursor-pointer">{item.label}</Label>
                       <p className="text-xs text-muted-foreground">{item.description}</p>
                     </div>
                   </div>
-                  <Switch
-                    checked={privacy[item.key as keyof typeof privacy]}
-                    onCheckedChange={(checked) => handlePrivacyChange(item.key, checked)}
-                  />
+                  <Switch checked={privacy[item.key as keyof typeof privacy]} onCheckedChange={(checked) => handlePrivacyChange(item.key, checked)} />
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* App Info */}
         <div className="text-center py-4 space-y-1">
           <p className="text-xs text-muted-foreground">Parivartan MIET v1.0.0</p>
           <p className="text-[10px] text-muted-foreground/70">Made with ❤️ for MIET Community</p>

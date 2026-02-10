@@ -37,35 +37,17 @@ export function TwoFactorAuth() {
     enabled: !!user?.id
   });
 
-  // Check if PPIN is enabled for login (mutual exclusivity)
-  const { data: ppinSettings } = useQuery({
-    queryKey: ['ppin-settings', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_ppin')
-        .select('is_enabled, use_for_login')
-        .eq('user_id', user?.id)
-        .single();
-      if (error && error.code !== 'PGRST116') return null;
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
-  const ppinActiveForLogin = ppinSettings?.is_enabled && ppinSettings?.use_for_login;
-
   const setupMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('setup-2fa', {
-        body: {}  // User ID extracted from JWT token in Edge Function
+        body: {}
       });
-      
       if (error) throw error;
       return data;
     },
     onSuccess: async (data) => {
       setSecret(data.secret);
-      setRecoveryCodes(data.recoveryCodes);
+      setRecoveryCodes(data.recoveryCodes || []);
       
       const otpauthUrl = `otpauth://totp/PARIVARTAN:${user?.email}?secret=${data.secret}&issuer=PARIVARTAN`;
       const qr = await QRCode.toDataURL(otpauthUrl);
@@ -80,16 +62,15 @@ export function TwoFactorAuth() {
   const verifyMutation = useMutation({
     mutationFn: async (code: string) => {
       const { data, error } = await supabase.functions.invoke('verify-2fa', {
-        body: { token: code, secret }  // User ID extracted from JWT
+        body: { token: code, secret }
       });
-      
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
       setShowSetup(false);
-      toast.success('2FA enabled successfully!');
+      toast.success('2FA enabled successfully! Save your recovery codes.');
     },
     onError: (error: any) => {
       toast.error(error.message || 'Invalid verification code');
@@ -99,15 +80,15 @@ export function TwoFactorAuth() {
   const disableMutation = useMutation({
     mutationFn: async (code: string) => {
       const { data, error } = await supabase.functions.invoke('disable-2fa', {
-        body: { token: code }  // User ID extracted from JWT
+        body: { token: code }
       });
-      
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
       setShowDisable(false);
+      setVerificationCode('');
       toast.success('2FA disabled successfully');
     },
     onError: (error: any) => {
@@ -117,10 +98,6 @@ export function TwoFactorAuth() {
 
   const handleToggle = (enabled: boolean) => {
     if (enabled) {
-      if (ppinActiveForLogin) {
-        toast.error('Please disable PPIN for login first. Only one verification method can be active at a time.');
-        return;
-      }
       setupMutation.mutate();
     } else {
       setShowDisable(true);
@@ -143,28 +120,30 @@ export function TwoFactorAuth() {
     toast.success('Recovery codes downloaded');
   };
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Two-Factor Authentication
-          </CardTitle>
-          <CardDescription>
-            Add an extra layer of security to your account
-          </CardDescription>
+      <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+        <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Two-Factor Authentication</CardTitle>
+              <CardDescription className="text-xs">
+                Add extra security with Google Authenticator. Recovery codes can be used if you lose access.
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <Label>Enable 2FA</Label>
               <p className="text-sm text-muted-foreground">
-                Use Google Authenticator to secure your account
+                Required after every login
               </p>
             </div>
             <Switch
@@ -178,7 +157,7 @@ export function TwoFactorAuth() {
 
       {/* Setup Dialog */}
       <Dialog open={showSetup} onOpenChange={setShowSetup}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Setup Two-Factor Authentication</DialogTitle>
             <DialogDescription>
@@ -189,19 +168,15 @@ export function TwoFactorAuth() {
           <div className="space-y-4">
             {qrCodeUrl && (
               <div className="flex justify-center">
-                <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
+                <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48" />
               </div>
             )}
             
             <div className="space-y-2">
               <Label>Or enter this key manually:</Label>
               <div className="flex gap-2">
-                <Input value={secret} readOnly className="font-mono" />
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() => copyToClipboard(secret)}
-                >
+                <Input value={secret} readOnly className="font-mono text-xs" />
+                <Button size="icon" variant="outline" onClick={() => copyToClipboard(secret)}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
@@ -209,17 +184,17 @@ export function TwoFactorAuth() {
 
             {recoveryCodes.length > 0 && (
               <div className="space-y-2">
-                <Label>Recovery Codes (Save these securely!):</Label>
-                <div className="bg-muted p-3 rounded-md space-y-1 font-mono text-sm">
+                <Label className="text-destructive font-semibold">⚠️ Save Recovery Codes!</Label>
+                <p className="text-xs text-muted-foreground">
+                  These codes can be used to log in if you lose access to your authenticator app.
+                  Each code can only be used once.
+                </p>
+                <div className="bg-muted p-3 rounded-md grid grid-cols-2 gap-1 font-mono text-sm">
                   {recoveryCodes.map((code, i) => (
                     <div key={i}>{code}</div>
                   ))}
                 </div>
-                <Button
-                  onClick={downloadRecoveryCodes}
-                  variant="outline"
-                  className="w-full"
-                >
+                <Button onClick={downloadRecoveryCodes} variant="outline" className="w-full">
                   <Download className="h-4 w-4 mr-2" />
                   Download Recovery Codes
                 </Button>
@@ -254,21 +229,20 @@ export function TwoFactorAuth() {
           <DialogHeader>
             <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
             <DialogDescription>
-              Enter your 6-digit code to confirm
+              Enter your 6-digit code or a recovery code to confirm
             </DialogDescription>
           </DialogHeader>
-          
           <div className="space-y-4">
             <Input
               value={verificationCode}
               onChange={(e) => setVerificationCode(e.target.value)}
-              placeholder="000000"
-              maxLength={6}
+              placeholder="Enter code"
+              maxLength={8}
               className="text-center text-lg tracking-widest"
             />
             <Button
               onClick={() => disableMutation.mutate(verificationCode)}
-              disabled={verificationCode.length !== 6 || disableMutation.isPending}
+              disabled={verificationCode.length < 6 || disableMutation.isPending}
               className="w-full"
               variant="destructive"
             >
