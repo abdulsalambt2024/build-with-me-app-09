@@ -27,6 +27,8 @@ const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
 const ContentModeration = lazy(() => import("./pages/admin/ContentModeration"));
 const Analytics = lazy(() => import("./pages/admin/Analytics"));
 const AdminTasks = lazy(() => import("./pages/admin/AdminTasks"));
+const RoleAssignment = lazy(() => import("./pages/admin/RoleAssignment"));
+const TaskAssignment = lazy(() => import("./pages/admin/TaskAssignment"));
 const ErrorLogs = lazy(() => import("./pages/admin/ErrorLogs"));
 const PaymentTransactions = lazy(() => import("./pages/admin/PaymentTransactions"));
 const Attendance = lazy(() => import("./pages/admin/Attendance"));
@@ -95,6 +97,8 @@ const App = () => (
                     <Route path="/admin/moderation" element={<Layout><ProtectedRoute requiredRole="admin"><ContentModeration /></ProtectedRoute></Layout>} />
                     <Route path="/admin/analytics" element={<Layout><ProtectedRoute requiredRole="admin"><Analytics /></ProtectedRoute></Layout>} />
                     <Route path="/admin/tasks" element={<Layout><ProtectedRoute requiredRole="admin"><AdminTasks /></ProtectedRoute></Layout>} />
+                    <Route path="/admin/roles" element={<Layout><ProtectedRoute requiredRole="admin"><RoleAssignment /></ProtectedRoute></Layout>} />
+                    <Route path="/admin/task-assignment" element={<Layout><ProtectedRoute requiredRole="admin"><TaskAssignment /></ProtectedRoute></Layout>} />
                     <Route path="/admin/errors" element={<Layout><ProtectedRoute requiredRole="super_admin"><ErrorLogs /></ProtectedRoute></Layout>} />
                     <Route path="/admin/payments" element={<Layout><ProtectedRoute requiredRole="admin"><PaymentTransactions /></ProtectedRoute></Layout>} />
                     <Route path="/admin/attendance" element={<Layout><ProtectedRoute requiredRole="admin"><Attendance /></ProtectedRoute></Layout>} />

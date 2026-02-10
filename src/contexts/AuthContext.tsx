@@ -33,37 +33,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        // Don't update state if we're waiting for verification
         if (requiresVerification) return;
-
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Fetch role after setting session
         if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-          }, 0);
+          setTimeout(() => fetchUserRole(session.user.id), 0);
         } else {
           setRole(null);
         }
-        
         setLoading(false);
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      }
-      
+      if (session?.user) fetchUserRole(session.user.id);
       setLoading(false);
     });
 
@@ -72,42 +59,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .rpc('get_user_role', { _user_id: userId });
-      
+      const { data, error } = await supabase.rpc('get_user_role', { _user_id: userId });
       if (error) throw error;
       setRole(data as UserRole);
-    } catch (error) {
-      console.error('Error fetching user role:', error);
-      setRole('viewer'); // Default to viewer if error
+    } catch {
+      setRole('viewer');
     }
   };
 
-  const checkVerificationRequired = async (userId: string): Promise<boolean> => {
+  const check2FARequired = async (userId: string): Promise<boolean> => {
     try {
-      // Check if PPIN is enabled for login
-      const { data: ppinData } = await supabase
-        .from('user_ppin')
-        .select('is_enabled, use_for_login')
-        .eq('user_id', userId)
-        .single();
-
-      if (ppinData?.is_enabled && ppinData?.use_for_login) {
-        return true;
-      }
-
-      // Check if 2FA is enabled
-      const { data: twoFaData } = await supabase
+      const { data } = await supabase
         .from('user_2fa')
         .select('enabled')
         .eq('user_id', userId)
         .single();
-
-      if (twoFaData?.enabled) {
-        return true;
-      }
-
-      return false;
+      return data?.enabled || false;
     } catch {
       return false;
     }
@@ -115,26 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
       const { error } = await supabase.auth.signUp({
-        email,
-        password,
+        email, password,
         options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
-          },
+          emailRedirectTo: `${window.location.origin}/`,
+          data: { full_name: fullName },
         },
       });
-
       if (error) throw error;
-
-      toast({
-        title: "Success!",
-        description: "Please check your email to verify your account.",
-      });
-
+      toast({ title: "Success!", description: "Please check your email to verify your account." });
       return { error: null };
     } catch (error: any) {
       return { error };
@@ -143,28 +99,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      // Check if verification is required
-      const needsVerification = await checkVerificationRequired(data.user.id);
-      
-      if (needsVerification) {
+      const needs2FA = await check2FARequired(data.user.id);
+      if (needs2FA) {
         setPendingVerificationUserId(data.user.id);
         setRequiresVerification(true);
-        // Don't set user/session yet - wait for verification
         return { error: null };
       }
 
-      toast({
-        title: "Welcome back!",
-        description: "You've successfully signed in.",
-      });
-
+      toast({ title: "Welcome back!", description: "You've successfully signed in." });
       navigate('/');
       return { error: null };
     } catch (error: any) {
@@ -173,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const completeVerification = async () => {
-    // Verification successful - get current session and set user
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       setSession(session);
@@ -182,17 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setRequiresVerification(false);
     setPendingVerificationUserId(null);
-    
-    toast({
-      title: "Welcome back!",
-      description: "You've successfully signed in.",
-    });
-    
+    toast({ title: "Welcome back!", description: "You've successfully signed in." });
     navigate('/');
   };
 
   const cancelVerification = async () => {
-    // User cancelled - sign them out
     await supabase.auth.signOut();
     setRequiresVerification(false);
     setPendingVerificationUserId(null);
@@ -203,20 +141,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
+      await supabase.auth.signOut();
       setUser(null);
       setSession(null);
       setRole(null);
       setRequiresVerification(false);
       setPendingVerificationUserId(null);
-      
-      toast({
-        title: "Signed out",
-        description: "You've been successfully signed out.",
-      });
-
+      toast({ title: "Signed out", description: "You've been successfully signed out." });
       navigate('/auth');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -228,14 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-
       if (error) throw error;
-
-      toast({
-        title: "Check your email",
-        description: "We've sent you a password reset link.",
-      });
-
+      toast({ title: "Check your email", description: "We've sent you a password reset link." });
       return { error: null };
     } catch (error: any) {
       return { error };
@@ -243,22 +168,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        role,
-        loading,
-        requiresVerification,
-        pendingVerificationUserId,
-        signUp,
-        signIn,
-        signOut,
-        resetPassword,
-        completeVerification,
-        cancelVerification,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user, session, role, loading, requiresVerification, pendingVerificationUserId,
+      signUp, signIn, signOut, resetPassword, completeVerification, cancelVerification,
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -266,8 +179,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
