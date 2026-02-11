@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FileText, BarChart3, Settings as SettingsIcon, Bug, CreditCard, CalendarCheck, Image, Shield, Bell, MessageSquare, ClipboardList, UserCog } from 'lucide-react';
+import { Users, FileText, BarChart3, Settings as SettingsIcon, Bug, CreditCard, CalendarCheck, Image, Shield, Bell, MessageSquare, ClipboardList, UserCog, Database } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Admin() {
@@ -11,6 +11,7 @@ export default function Admin() {
     { title: 'User Management', description: 'Manage users and permissions', icon: Users, path: '/admin/users' },
     { title: 'Role Assignment', description: 'Assign roles to users', icon: UserCog, path: '/admin/roles' },
     { title: 'Task Assignment', description: 'Assign and manage tasks', icon: ClipboardList, path: '/admin/task-assignment' },
+    { title: 'Data Tracking', description: 'User activity & performance data', icon: Database, path: '/admin/data-tracking' },
     { title: 'Content Moderation', description: 'Review and moderate content', icon: FileText, path: '/admin/moderation' },
     { title: 'Analytics', description: 'View engagement metrics', icon: BarChart3, path: '/admin/analytics' },
     { title: 'Attendance', description: 'Mark and track attendance', icon: CalendarCheck, path: '/admin/attendance' },

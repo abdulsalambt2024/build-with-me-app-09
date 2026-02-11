@@ -13,6 +13,7 @@ import { PopupDisplay } from '@/components/popup/PopupDisplay';
 import { memo, useCallback, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { Trophy } from 'lucide-react';
 
 // Memoized stat card for better performance
 const StatCard = memo(({ icon: Icon, value, label, gradient, iconColor }: {
@@ -164,22 +165,22 @@ export default function Home() {
                 <Button 
                   variant="outline" 
                   className="h-auto flex-col gap-2 py-4 border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200" 
+                  onClick={() => navigate('/achievements')}
+                >
+                  <div className="p-2 rounded-lg bg-amber-500/10">
+                    <Trophy className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <span className="text-xs font-medium">Achievements</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-auto flex-col gap-2 py-4 border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200" 
                   onClick={() => navigate('/chat')}
                 >
                   <div className="p-2 rounded-lg bg-accent/10">
                     <MessageCircle className="h-5 w-5 text-accent" />
                   </div>
                   <span className="text-xs font-medium">Start Chat</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-auto flex-col gap-2 py-4 border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 md:hidden" 
-                  onClick={() => navigate('/ai-studio')}
-                >
-                  <div className="p-2 rounded-lg bg-violet-500/10">
-                    <Lightbulb className="h-5 w-5 text-violet-500" />
-                  </div>
-                  <span className="text-xs font-medium">AI Studio</span>
                 </Button>
               </div>
             </CardContent>

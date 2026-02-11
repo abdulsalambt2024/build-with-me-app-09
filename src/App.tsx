@@ -36,6 +36,7 @@ const SlideshowManager = lazy(() => import("./pages/admin/SlideshowManager"));
 const BadgeManagement = lazy(() => import("./pages/admin/BadgeManagement"));
 const PopupManager = lazy(() => import("./pages/admin/PopupManager"));
 const ChatbotFAQ = lazy(() => import("./pages/admin/ChatbotFAQ"));
+const DataTracking = lazy(() => import("./pages/admin/DataTracking"));
 const PerformanceDashboard = lazy(() => import("./pages/PerformanceDashboard"));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
 const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
@@ -106,6 +107,7 @@ const App = () => (
                     <Route path="/admin/badges" element={<Layout><ProtectedRoute requiredRole="super_admin"><BadgeManagement /></ProtectedRoute></Layout>} />
                     <Route path="/admin/popups" element={<Layout><ProtectedRoute requiredRole="super_admin"><PopupManager /></ProtectedRoute></Layout>} />
                     <Route path="/admin/chatbot-faq" element={<Layout><ProtectedRoute requiredRole="admin"><ChatbotFAQ /></ProtectedRoute></Layout>} />
+                    <Route path="/admin/data-tracking" element={<Layout><ProtectedRoute requiredRole="admin"><DataTracking /></ProtectedRoute></Layout>} />
                     <Route path="/performance" element={<Layout><ProtectedRoute><PerformanceDashboard /></ProtectedRoute></Layout>} />
                     <Route path="/donations/:id" element={<Layout><ProtectedRoute><CampaignDetail /></ProtectedRoute></Layout>} />
                     <Route path="/settings" element={<Layout><ProtectedRoute><Settings /></ProtectedRoute></Layout>} />
