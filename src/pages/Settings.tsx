@@ -6,11 +6,13 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme, ColorScheme } from '@/contexts/ColorSchemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { Moon, Sun, Monitor, Bell, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi, BellRing } from 'lucide-react';
+import { Moon, Sun, Monitor, Bell, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi, BellRing, Save } from 'lucide-react';
 import { TwoFactorAuth } from '@/components/settings/TwoFactorAuth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const themes = [
   { id: 'light', name: 'Light', icon: Sun, description: 'Bright & clean' },
@@ -30,45 +32,86 @@ const colorSchemes: { id: ColorScheme; name: string; color: string; gradient: st
 ];
 
 const notificationItems = [
-  { key: 'posts', label: 'Posts', description: 'New posts from your community', icon: Activity },
-  { key: 'events', label: 'Events', description: 'Event reminders & updates', icon: Bell },
-  { key: 'tasks', label: 'Tasks', description: 'Task assignments & deadlines', icon: Check },
-  { key: 'achievements', label: 'Achievements', description: 'Badge unlocks & rewards', icon: Sparkles },
-  { key: 'chat', label: 'Messages', description: 'Direct & group messages', icon: Mail },
-  { key: 'announcements', label: 'Announcements', description: 'Important announcements', icon: Bell },
+  { key: 'notification_posts', label: 'Posts', description: 'New posts from your community', icon: Activity },
+  { key: 'notification_events', label: 'Events', description: 'Event reminders & updates', icon: Bell },
+  { key: 'notification_tasks', label: 'Tasks', description: 'Task assignments & deadlines', icon: Check },
+  { key: 'notification_achievements', label: 'Achievements', description: 'Badge unlocks & rewards', icon: Sparkles },
+  { key: 'notification_chat', label: 'Messages', description: 'Direct & group messages', icon: Mail },
+  { key: 'notification_announcements', label: 'Announcements', description: 'Important announcements', icon: Bell },
 ];
 
 const privacyItems = [
-  { key: 'profileVisible', label: 'Profile Visibility', description: 'Allow others to view your profile', icon: Eye },
-  { key: 'showEmail', label: 'Show Email', description: 'Display email on your profile', icon: Mail },
-  { key: 'showActivity', label: 'Activity Status', description: 'Show your recent activity', icon: Activity },
-  { key: 'showOnlineStatus', label: 'Online Status', description: 'Show when you are online', icon: Wifi },
+  { key: 'privacy_profile_visible', label: 'Profile Visibility', description: 'Allow others to view your profile', icon: Eye },
+  { key: 'privacy_show_email', label: 'Show Email', description: 'Display email on your profile', icon: Mail },
+  { key: 'privacy_show_activity', label: 'Activity Status', description: 'Show your recent activity', icon: Activity },
+  { key: 'privacy_show_online_status', label: 'Online Status', description: 'Show when you are online', icon: Wifi },
 ];
+
+const defaultSettings = {
+  notification_posts: true, notification_events: true, notification_tasks: true,
+  notification_achievements: true, notification_chat: true, notification_announcements: true,
+  privacy_profile_visible: true, privacy_show_email: false,
+  privacy_show_activity: true, privacy_show_online_status: true,
+};
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { colorScheme, setColorScheme } = useColorScheme();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { isSupported, isSubscribed, permission, subscribe, unsubscribe } = usePushNotifications();
-  
-  const [notifications, setNotifications] = useState({
-    posts: true, events: true, tasks: true, achievements: true, chat: true, announcements: true,
-  });
-  const [privacy, setPrivacy] = useState({
-    profileVisible: true, showEmail: false, showActivity: true, showOnlineStatus: true,
-  });
+  const queryClient = useQueryClient();
+
+  const [settings, setSettings] = useState(defaultSettings);
+  const [isDirty, setIsDirty] = useState(false);
 
   const canUse2FA = role !== 'viewer';
 
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setNotifications(prev => ({ ...prev, [key]: value }));
-    toast.success('Notification preference updated');
+  // Load settings from DB
+  const { data: savedSettings } = useQuery({
+    queryKey: ['user-settings', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  useEffect(() => {
+    if (savedSettings) {
+      const s: any = {};
+      for (const key of Object.keys(defaultSettings)) {
+        s[key] = savedSettings[key as keyof typeof savedSettings] ?? (defaultSettings as any)[key];
+      }
+      setSettings(s);
+    }
+  }, [savedSettings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (newSettings: typeof defaultSettings) => {
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({ user_id: user?.id, ...newSettings, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-settings'] });
+      setIsDirty(false);
+      toast.success('Settings saved!');
+    },
+    onError: () => toast.error('Failed to save settings'),
+  });
+
+  const handleSettingChange = (key: string, value: boolean) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+    setIsDirty(true);
   };
 
-  const handlePrivacyChange = (key: string, value: boolean) => {
-    setPrivacy(prev => ({ ...prev, [key]: value }));
-    toast.success('Privacy setting updated');
-  };
+  const handleSave = () => saveMutation.mutate(settings);
 
   const handleColorSchemeChange = (scheme: ColorScheme) => {
     setColorScheme(scheme);
@@ -83,22 +126,25 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
       <div className="container max-w-2xl mx-auto p-4 pb-24 space-y-6">
-        <div className="space-y-1 pt-2">
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground text-sm">Personalize your Parivartan experience</p>
+        <div className="flex items-center justify-between pt-2">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
+            <p className="text-muted-foreground text-sm">Personalize your experience</p>
+          </div>
+          {isDirty && (
+            <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
+              <Save className="h-4 w-4 mr-1.5" />
+              Save
+            </Button>
+          )}
         </div>
 
-        {/* Theme Mode Section */}
+        {/* Theme Mode */}
         <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 to-transparent">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-primary/10">
-                <Palette className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Appearance</CardTitle>
-                <CardDescription className="text-xs">Choose your preferred theme</CardDescription>
-              </div>
+              <div className="p-2.5 rounded-xl bg-primary/10"><Palette className="h-5 w-5 text-primary" /></div>
+              <div><CardTitle className="text-lg">Appearance</CardTitle><CardDescription className="text-xs">Choose your preferred theme</CardDescription></div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -106,55 +152,27 @@ export default function Settings() {
               <Label className="text-sm font-medium">Theme Mode</Label>
               <div className="grid grid-cols-3 gap-3">
                 {themes.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => setTheme(t.id as 'light' | 'dark' | 'system')}
-                    className={cn(
-                      'relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200',
-                      theme === t.id
-                        ? 'border-primary bg-primary/5 shadow-md'
-                        : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'
-                    )}
-                  >
-                    {theme === t.id && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="h-3 w-3 text-primary-foreground" />
-                      </div>
-                    )}
-                    <div className={cn('p-2.5 rounded-lg transition-colors', theme === t.id ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/10')}>
-                      <t.icon className="h-5 w-5" />
-                    </div>
-                    <div className="text-center">
-                      <p className="font-medium text-sm">{t.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{t.description}</p>
-                    </div>
+                  <button key={t.id} onClick={() => setTheme(t.id as any)}
+                    className={cn('relative flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200',
+                      theme === t.id ? 'border-primary bg-primary/5 shadow-md' : 'border-transparent bg-muted/50 hover:bg-muted')}>
+                    {theme === t.id && <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center"><Check className="h-3 w-3 text-primary-foreground" /></div>}
+                    <div className={cn('p-2 rounded-lg transition-colors', theme === t.id ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/10')}><t.icon className="h-5 w-5" /></div>
+                    <p className="font-medium text-xs sm:text-sm">{t.name}</p>
                   </button>
                 ))}
               </div>
             </div>
-
             <div className="space-y-3">
               <Label className="text-sm font-medium">Accent Color</Label>
               <div className="grid grid-cols-4 gap-2">
                 {colorSchemes.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => handleColorSchemeChange(c.id)}
-                    className={cn(
-                      'group relative flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200',
-                      colorScheme === c.id
-                        ? 'border-primary shadow-md scale-[1.02]'
-                        : 'border-transparent hover:border-muted-foreground/20 hover:scale-[1.02]'
-                    )}
-                  >
-                    <div className={cn('w-10 h-10 rounded-full bg-gradient-to-br shadow-lg transition-transform group-hover:scale-110', c.gradient)}>
-                      {colorScheme === c.id && (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Check className="h-5 w-5 text-white drop-shadow" />
-                        </div>
-                      )}
+                  <button key={c.id} onClick={() => handleColorSchemeChange(c.id)}
+                    className={cn('group relative flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all',
+                      colorScheme === c.id ? 'border-primary shadow-md' : 'border-transparent hover:border-muted-foreground/20')}>
+                    <div className={cn('w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br shadow-lg', c.gradient)}>
+                      {colorScheme === c.id && <div className="w-full h-full flex items-center justify-center"><Check className="h-4 w-4 text-white drop-shadow" /></div>}
                     </div>
-                    <span className="text-xs font-medium">{c.name}</span>
+                    <span className="text-[10px] sm:text-xs font-medium">{c.name}</span>
                   </button>
                 ))}
               </div>
@@ -167,14 +185,10 @@ export default function Settings() {
           <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 to-transparent">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-primary/10">
-                  <BellRing className="h-5 w-5 text-primary" />
-                </div>
+                <div className="p-2.5 rounded-xl bg-primary/10"><BellRing className="h-5 w-5 text-primary" /></div>
                 <div>
                   <CardTitle className="text-lg">Push Notifications</CardTitle>
-                  <CardDescription className="text-xs">
-                    {permission === 'denied' ? 'Blocked in browser settings' : 'Receive notifications even when app is closed'}
-                  </CardDescription>
+                  <CardDescription className="text-xs">{permission === 'denied' ? 'Blocked in browser settings' : 'Receive notifications even when app is closed'}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -182,9 +196,7 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm font-medium">Enable Push Notifications</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {isSubscribed ? 'You will receive push notifications' : 'Turn on to stay updated'}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{isSubscribed ? 'You will receive push notifications' : 'Turn on to stay updated'}</p>
                 </div>
                 <Switch checked={isSubscribed} onCheckedChange={handlePushToggle} disabled={permission === 'denied'} />
               </div>
@@ -192,20 +204,15 @@ export default function Settings() {
           </Card>
         )}
 
-        {/* 2FA Section */}
+        {/* 2FA */}
         {canUse2FA && <TwoFactorAuth />}
 
-        {/* Notifications */}
+        {/* In-App Notifications */}
         <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader className="pb-4 bg-gradient-to-r from-secondary/5 to-transparent">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-secondary/10">
-                <Bell className="h-5 w-5 text-secondary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">In-App Notifications</CardTitle>
-                <CardDescription className="text-xs">Control what notifications you receive</CardDescription>
-              </div>
+              <div className="p-2.5 rounded-xl bg-secondary/10"><Bell className="h-5 w-5 text-secondary" /></div>
+              <div><CardTitle className="text-lg">In-App Notifications</CardTitle><CardDescription className="text-xs">Control what notifications you receive</CardDescription></div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -219,7 +226,7 @@ export default function Settings() {
                       <p className="text-xs text-muted-foreground">{item.description}</p>
                     </div>
                   </div>
-                  <Switch checked={notifications[item.key as keyof typeof notifications]} onCheckedChange={(checked) => handleNotificationChange(item.key, checked)} />
+                  <Switch checked={settings[item.key as keyof typeof settings]} onCheckedChange={(checked) => handleSettingChange(item.key, checked)} />
                 </div>
               ))}
             </div>
@@ -230,13 +237,8 @@ export default function Settings() {
         <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader className="pb-4 bg-gradient-to-r from-destructive/5 to-transparent">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-destructive/10">
-                <Shield className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Privacy & Security</CardTitle>
-                <CardDescription className="text-xs">Manage your privacy preferences</CardDescription>
-              </div>
+              <div className="p-2.5 rounded-xl bg-destructive/10"><Shield className="h-5 w-5 text-destructive" /></div>
+              <div><CardTitle className="text-lg">Privacy & Security</CardTitle><CardDescription className="text-xs">Manage your privacy preferences</CardDescription></div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -250,12 +252,19 @@ export default function Settings() {
                       <p className="text-xs text-muted-foreground">{item.description}</p>
                     </div>
                   </div>
-                  <Switch checked={privacy[item.key as keyof typeof privacy]} onCheckedChange={(checked) => handlePrivacyChange(item.key, checked)} />
+                  <Switch checked={settings[item.key as keyof typeof settings]} onCheckedChange={(checked) => handleSettingChange(item.key, checked)} />
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
+
+        {isDirty && (
+          <Button onClick={handleSave} disabled={saveMutation.isPending} className="w-full">
+            <Save className="h-4 w-4 mr-2" />
+            Save Changes
+          </Button>
+        )}
 
         <div className="text-center py-4 space-y-1">
           <p className="text-xs text-muted-foreground">Parivartan MIET v1.0.0</p>

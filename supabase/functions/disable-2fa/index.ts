@@ -13,7 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    // Get user from JWT
     const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
     if (!authHeader) {
       return new Response(
@@ -36,41 +35,66 @@ serve(async (req) => {
 
     const { token } = await req.json();
     const userId = user.id;
-    
+
     // Get user's 2FA settings
     const { data: twoFactorData, error: fetchError } = await supabase
       .from('user_2fa')
-      .select('secret')
+      .select('secret, recovery_codes_hashed')
       .eq('user_id', userId)
       .single();
-    
+
     if (fetchError) throw fetchError;
-    
-    // Verify token
+
+    // First try TOTP verification
     const totp = new OTPAuth.TOTP({
       secret: OTPAuth.Secret.fromBase32(twoFactorData.secret),
       digits: 6,
       period: 30,
     });
-    
+
     const delta = totp.validate({ token, window: 1 });
-    
-    if (delta === null) {
-      throw new Error('Invalid token');
+
+    if (delta !== null) {
+      // TOTP code is valid - disable 2FA
+      const { error } = await supabase
+        .from('user_2fa')
+        .update({ enabled: false })
+        .eq('user_id', userId);
+      if (error) throw error;
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-    
-    // Disable 2FA
-    const { error } = await supabase
-      .from('user_2fa')
-      .update({ enabled: false })
-      .eq('user_id', userId);
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ success: true }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+
+    // Try recovery code
+    if (token.length === 8 && twoFactorData.recovery_codes_hashed) {
+      const encoder = new TextEncoder();
+      const tokenData = encoder.encode(token.toUpperCase());
+      const hash = await crypto.subtle.digest('SHA-256', tokenData);
+      const tokenHash = btoa(String.fromCharCode(...new Uint8Array(hash)));
+
+      const codeIndex = twoFactorData.recovery_codes_hashed.indexOf(tokenHash);
+      if (codeIndex !== -1) {
+        // Valid recovery code - disable 2FA and remove used code
+        const updatedCodes = [...twoFactorData.recovery_codes_hashed];
+        updatedCodes.splice(codeIndex, 1);
+
+        const { error } = await supabase
+          .from('user_2fa')
+          .update({ enabled: false, recovery_codes_hashed: updatedCodes })
+          .eq('user_id', userId);
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    throw new Error('Invalid code');
   } catch (error) {
     console.error('Error:', error);
     return new Response(
