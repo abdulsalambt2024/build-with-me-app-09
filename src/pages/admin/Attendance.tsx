@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,12 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Search, UserCheck, UserX, Clock, CalendarDays, Users, Check, X } from 'lucide-react';
+import { Search, UserCheck, UserX, Clock, CalendarDays, Users, Check, X, Download } from 'lucide-react';
 
 interface AttendanceRecord {
   id: string;
@@ -40,11 +37,10 @@ export default function Attendance() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [markingDialogOpen, setMarkingDialogOpen] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-  // Fetch all members
   const { data: members } = useQuery({
     queryKey: ['members-for-attendance'],
     queryFn: async () => {
@@ -52,21 +48,17 @@ export default function Attendance() {
         .from('user_roles')
         .select('user_id')
         .in('role', ['member', 'admin', 'super_admin']);
-
       if (!roles?.length) return [];
-
       const userIds = roles.map(r => r.user_id);
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('user_id, full_name, avatar_url, roll_number, course, branch')
         .in('user_id', userIds);
-
       if (error) throw error;
       return profiles as UserProfile[];
     },
   });
 
-  // Fetch attendance for selected date
   const { data: attendance, isLoading } = useQuery({
     queryKey: ['attendance', dateStr],
     queryFn: async () => {
@@ -74,16 +66,13 @@ export default function Attendance() {
         .from('attendance')
         .select('*')
         .eq('date', dateStr);
-
       if (error) throw error;
       return data as AttendanceRecord[];
     },
   });
 
-  // Mark attendance mutation
   const markAttendance = useMutation({
     mutationFn: async ({ userId, status, notes }: { userId: string; status: string; notes?: string }) => {
-      // Check if record exists
       const { data: existing } = await supabase
         .from('attendance')
         .select('id')
@@ -100,13 +89,7 @@ export default function Attendance() {
       } else {
         const { error } = await supabase
           .from('attendance')
-          .insert({
-            user_id: userId,
-            date: dateStr,
-            status,
-            notes,
-            marked_by: user?.id,
-          });
+          .insert({ user_id: userId, date: dateStr, status, notes, marked_by: user?.id });
         if (error) throw error;
       }
     },
@@ -114,16 +97,11 @@ export default function Attendance() {
       queryClient.invalidateQueries({ queryKey: ['attendance', dateStr] });
       toast.success('Attendance marked');
     },
-    onError: (error) => {
-      toast.error('Failed to mark attendance');
-      console.error(error);
-    },
+    onError: () => toast.error('Failed to mark attendance'),
   });
 
-  // Bulk mark all present
   const markAllPresent = async () => {
     if (!members) return;
-    
     for (const member of members) {
       const existing = attendance?.find(a => a.user_id === member.user_id);
       if (!existing) {
@@ -133,38 +111,45 @@ export default function Attendance() {
     toast.success('All members marked present');
   };
 
-  const getAttendanceStatus = (userId: string) => {
-    return attendance?.find(a => a.user_id === userId)?.status || null;
+  const downloadAttendance = () => {
+    if (!members || !attendance) return;
+    const rows = members.map(m => {
+      const record = attendance.find(a => a.user_id === m.user_id);
+      return `${m.full_name || 'Unknown'},${m.roll_number || '-'},${record?.status || 'Not Marked'}`;
+    });
+    const csv = `Name,Roll Number,Status\n${rows.join('\n')}`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance-${dateStr}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Attendance downloaded');
   };
+
+  const getAttendanceStatus = (userId: string) => attendance?.find(a => a.user_id === userId)?.status || null;
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
-      case 'present':
-        return <Badge className="bg-emerald-500"><Check className="h-3 w-3 mr-1" />Present</Badge>;
-      case 'absent':
-        return <Badge variant="destructive"><X className="h-3 w-3 mr-1" />Absent</Badge>;
-      case 'late':
-        return <Badge className="bg-amber-500"><Clock className="h-3 w-3 mr-1" />Late</Badge>;
-      case 'excused':
-        return <Badge variant="secondary">Excused</Badge>;
-      default:
-        return <Badge variant="outline">Not Marked</Badge>;
+      case 'present': return <Badge className="bg-emerald-500 text-xs"><Check className="h-3 w-3 mr-1" />P</Badge>;
+      case 'absent': return <Badge variant="destructive" className="text-xs"><X className="h-3 w-3 mr-1" />A</Badge>;
+      case 'late': return <Badge className="bg-amber-500 text-xs"><Clock className="h-3 w-3 mr-1" />L</Badge>;
+      case 'excused': return <Badge variant="secondary" className="text-xs">E</Badge>;
+      default: return <Badge variant="outline" className="text-xs">—</Badge>;
     }
   };
 
   const filteredMembers = members?.filter(member => {
-    const matchesSearch = 
+    const matchesSearch =
       member.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.roll_number?.toLowerCase().includes(searchQuery.toLowerCase());
-    
     if (statusFilter === 'all') return matchesSearch;
-    
     const status = getAttendanceStatus(member.user_id);
     if (statusFilter === 'not_marked') return matchesSearch && !status;
     return matchesSearch && status === statusFilter;
   });
 
-  // Stats
   const stats = {
     total: members?.length || 0,
     present: attendance?.filter(a => a.status === 'present').length || 0,
@@ -173,180 +158,122 @@ export default function Attendance() {
   };
 
   return (
-    <div className="container max-w-7xl mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Attendance Management</h1>
-          <p className="text-muted-foreground">Mark and track member attendance</p>
-        </div>
+    <div className="container max-w-7xl mx-auto p-3 sm:p-4 pb-24 space-y-4">
+      <div>
+        <h1 className="text-xl sm:text-3xl font-bold">Attendance</h1>
+        <p className="text-sm text-muted-foreground">Mark and track member attendance</p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Calendar */}
+      {/* Stats - 4 columns compact */}
+      <div className="grid grid-cols-4 gap-2">
+        {[
+          { icon: Users, label: 'Total', value: stats.total, color: 'text-muted-foreground' },
+          { icon: UserCheck, label: 'Present', value: stats.present, color: 'text-emerald-500' },
+          { icon: UserX, label: 'Absent', value: stats.absent, color: 'text-destructive' },
+          { icon: Clock, label: 'Late', value: stats.late, color: 'text-amber-500' },
+        ].map(s => (
+          <Card key={s.label}>
+            <CardContent className="p-2 sm:p-4 text-center">
+              <s.icon className={`h-4 w-4 sm:h-6 sm:w-6 mx-auto ${s.color}`} />
+              <div className={`text-lg sm:text-2xl font-bold mt-1 ${s.color}`}>{s.value}</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">{s.label}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Date picker button + Calendar toggle */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <Button variant="outline" size="sm" onClick={() => setShowCalendar(!showCalendar)}>
+          <CalendarDays className="h-4 w-4 mr-1.5" />
+          {format(selectedDate, 'MMM d, yyyy')}
+        </Button>
+        <Button size="sm" onClick={markAllPresent}>
+          <Check className="h-4 w-4 mr-1.5" />
+          All Present
+        </Button>
+        <Button size="sm" variant="outline" onClick={downloadAttendance}>
+          <Download className="h-4 w-4 mr-1.5" />
+          CSV
+        </Button>
+      </div>
+
+      {showCalendar && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
-              Select Date
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-2 flex justify-center">
             <Calendar
               mode="single"
               selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              className="rounded-md border"
+              onSelect={(date) => { if (date) { setSelectedDate(date); setShowCalendar(false); }}}
+              className="rounded-md"
             />
           </CardContent>
         </Card>
+      )}
 
-        {/* Stats and Members */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <Users className="h-6 w-6 mx-auto text-muted-foreground" />
-                <div className="text-2xl font-bold mt-2">{stats.total}</div>
-                <div className="text-xs text-muted-foreground">Total</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <UserCheck className="h-6 w-6 mx-auto text-emerald-500" />
-                <div className="text-2xl font-bold mt-2 text-emerald-500">{stats.present}</div>
-                <div className="text-xs text-muted-foreground">Present</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <UserX className="h-6 w-6 mx-auto text-destructive" />
-                <div className="text-2xl font-bold mt-2 text-destructive">{stats.absent}</div>
-                <div className="text-xs text-muted-foreground">Absent</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <Clock className="h-6 w-6 mx-auto text-amber-500" />
-                <div className="text-2xl font-bold mt-2 text-amber-500">{stats.late}</div>
-                <div className="text-xs text-muted-foreground">Late</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Members List */}
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                <CardTitle>
-                  Attendance for {format(selectedDate, 'MMMM d, yyyy')}
-                </CardTitle>
-                <Button onClick={markAllPresent} size="sm">
-                  <Check className="h-4 w-4 mr-2" />
-                  Mark All Present
-                </Button>
-              </div>
-              <div className="flex flex-col md:flex-row gap-4 mt-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name or roll number..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Members</SelectItem>
-                    <SelectItem value="present">Present</SelectItem>
-                    <SelectItem value="absent">Absent</SelectItem>
-                    <SelectItem value="late">Late</SelectItem>
-                    <SelectItem value="not_marked">Not Marked</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
-              ) : filteredMembers?.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No members found</div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Member</TableHead>
-                      <TableHead>Roll Number</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredMembers?.map((member) => {
-                      const status = getAttendanceStatus(member.user_id);
-                      return (
-                        <TableRow key={member.user_id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                {member.avatar_url ? (
-                                  <img src={member.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
-                                ) : (
-                                  <span className="text-sm font-medium">
-                                    {member.full_name?.charAt(0) || '?'}
-                                  </span>
-                                )}
-                              </div>
-                              <div>
-                                <div className="font-medium">{member.full_name || 'Unknown'}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {member.course} - {member.branch}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{member.roll_number || '-'}</TableCell>
-                          <TableCell>{getStatusBadge(status)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant={status === 'present' ? 'default' : 'outline'}
-                                className={status === 'present' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}
-                                onClick={() => markAttendance.mutate({ userId: member.user_id, status: 'present' })}
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant={status === 'absent' ? 'destructive' : 'outline'}
-                                onClick={() => markAttendance.mutate({ userId: member.user_id, status: 'absent' })}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant={status === 'late' ? 'default' : 'outline'}
-                                className={status === 'late' ? 'bg-amber-500 hover:bg-amber-600' : ''}
-                                onClick={() => markAttendance.mutate({ userId: member.user_id, status: 'late' })}
-                              >
-                                <Clock className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+      {/* Search and filter */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-8 h-9 text-sm" />
         </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-28 h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="present">Present</SelectItem>
+            <SelectItem value="absent">Absent</SelectItem>
+            <SelectItem value="late">Late</SelectItem>
+            <SelectItem value="not_marked">Not Marked</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Members list - card based for mobile */}
+      <div className="space-y-2">
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        ) : filteredMembers?.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">No members found</div>
+        ) : (
+          filteredMembers?.map((member) => {
+            const status = getAttendanceStatus(member.user_id);
+            return (
+              <Card key={member.user_id}>
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                    {member.avatar_url ? (
+                      <img src={member.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                    ) : (
+                      <span className="text-sm font-medium">{member.full_name?.charAt(0) || '?'}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm truncate">{member.full_name || 'Unknown'}</div>
+                    <div className="text-xs text-muted-foreground">{member.roll_number || '-'}</div>
+                  </div>
+                  <div className="shrink-0">{getStatusBadge(status)}</div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="icon" variant={status === 'present' ? 'default' : 'outline'} className={`h-8 w-8 ${status === 'present' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+                      onClick={() => markAttendance.mutate({ userId: member.user_id, status: 'present' })}>
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant={status === 'absent' ? 'destructive' : 'outline'} className="h-8 w-8"
+                      onClick={() => markAttendance.mutate({ userId: member.user_id, status: 'absent' })}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant={status === 'late' ? 'default' : 'outline'} className={`h-8 w-8 ${status === 'late' ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
+                      onClick={() => markAttendance.mutate({ userId: member.user_id, status: 'late' })}>
+                      <Clock className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
     </div>
   );

@@ -22,7 +22,6 @@ export default function Profile() {
         .select('*')
         .eq('user_id', user?.id)
         .single();
-      
       if (error) throw error;
       return data;
     },
@@ -31,27 +30,19 @@ export default function Profile() {
 
   const getRoleBadgeVariant = (userRole: string | null) => {
     switch (userRole) {
-      case 'super_admin':
-        return 'destructive';
-      case 'admin':
-        return 'default';
-      case 'member':
-        return 'secondary';
-      default:
-        return 'outline';
+      case 'super_admin': return 'destructive';
+      case 'admin': return 'default';
+      case 'member': return 'secondary';
+      default: return 'outline';
     }
   };
 
   const getRoleLabel = (userRole: string | null) => {
     switch (userRole) {
-      case 'super_admin':
-        return 'Super Admin';
-      case 'admin':
-        return 'Admin';
-      case 'member':
-        return 'Member';
-      default:
-        return 'Viewer';
+      case 'super_admin': return 'Super Admin';
+      case 'admin': return 'Admin';
+      case 'member': return 'Member';
+      default: return 'Viewer';
     }
   };
 
@@ -68,37 +59,39 @@ export default function Profile() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto p-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
+    <div className="container max-w-4xl mx-auto p-4 pb-24">
+      <Card className="overflow-hidden">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-4">
+            {/* Avatar and info */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 shrink-0">
                 <AvatarImage src={profile?.avatar_url} />
-                <AvatarFallback className="text-2xl">
+                <AvatarFallback className="text-xl sm:text-2xl">
                   {profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-2xl">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CardTitle className="text-lg sm:text-2xl truncate">
                     {profile?.full_name || user.email}
                   </CardTitle>
                   <VerifiedBadge userId={user?.id || ''} />
                 </div>
-                <CardDescription className="flex items-center gap-2 mt-1">
-                  <Mail className="h-4 w-4" />
-                  {user.email}
+                <CardDescription className="flex items-center gap-1.5 mt-1 text-xs sm:text-sm">
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{user.email}</span>
                 </CardDescription>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => navigate('/profile/edit')}>
-                <Edit className="mr-2 h-4 w-4" />
+            {/* Action buttons - full width on mobile */}
+            <div className="flex gap-2 w-full">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate('/profile/edit')}>
+                <Edit className="mr-1.5 h-4 w-4" />
                 Edit
               </Button>
-              <Button variant="outline" onClick={signOut}>
-                <LogOut className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" className="flex-1" onClick={signOut}>
+                <LogOut className="mr-1.5 h-4 w-4" />
                 Sign Out
               </Button>
             </div>
@@ -107,23 +100,23 @@ export default function Profile() {
         
         <Separator />
         
-        <CardContent className="pt-6 space-y-6">
+        <CardContent className="p-4 sm:pt-6 space-y-4 sm:space-y-6">
           {profile?.bio && (
             <>
               <div>
-                <h3 className="text-lg font-semibold mb-2">Bio</h3>
-                <p className="text-muted-foreground">{profile.bio}</p>
+                <h3 className="text-base sm:text-lg font-semibold mb-1.5">Bio</h3>
+                <p className="text-muted-foreground text-sm">{profile.bio}</p>
               </div>
               <Separator />
             </>
           )}
           
           <div>
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <Shield className="h-5 w-5" />
+            <h3 className="text-base sm:text-lg font-semibold mb-3 flex items-center gap-2">
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
               Account Information
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Role:</span>
                 <Badge variant={getRoleBadgeVariant(role)}>

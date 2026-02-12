@@ -1513,6 +1513,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          notification_achievements: boolean | null
+          notification_announcements: boolean | null
+          notification_chat: boolean | null
+          notification_events: boolean | null
+          notification_posts: boolean | null
+          notification_tasks: boolean | null
+          privacy_profile_visible: boolean | null
+          privacy_show_activity: boolean | null
+          privacy_show_email: boolean | null
+          privacy_show_online_status: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notification_achievements?: boolean | null
+          notification_announcements?: boolean | null
+          notification_chat?: boolean | null
+          notification_events?: boolean | null
+          notification_posts?: boolean | null
+          notification_tasks?: boolean | null
+          privacy_profile_visible?: boolean | null
+          privacy_show_activity?: boolean | null
+          privacy_show_email?: boolean | null
+          privacy_show_online_status?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notification_achievements?: boolean | null
+          notification_announcements?: boolean | null
+          notification_chat?: boolean | null
+          notification_events?: boolean | null
+          notification_posts?: boolean | null
+          notification_tasks?: boolean | null
+          privacy_profile_visible?: boolean | null
+          privacy_show_activity?: boolean | null
+          privacy_show_email?: boolean | null
+          privacy_show_online_status?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       verification_badges: {
         Row: {
           badge_color: string | null

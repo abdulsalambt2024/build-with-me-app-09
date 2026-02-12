@@ -33,12 +33,12 @@ serve(async (req) => {
       );
     }
 
-    const { token } = await req.json();
-    
+    const { token, isRecoveryCode } = await req.json();
+
     // Get stored 2FA secret
     const { data: twoFaData, error: twoFaError } = await supabase
       .from('user_2fa')
-      .select('secret, enabled')
+      .select('secret, enabled, recovery_codes_hashed')
       .eq('user_id', user.id)
       .single();
 
@@ -49,15 +49,45 @@ serve(async (req) => {
       );
     }
 
-    // Create TOTP instance and verify
+    // Try recovery code first if flagged
+    if (isRecoveryCode && token.length === 8 && twoFaData.recovery_codes_hashed) {
+      const encoder = new TextEncoder();
+      const tokenData = encoder.encode(token.toUpperCase());
+      const hash = await crypto.subtle.digest('SHA-256', tokenData);
+      const tokenHash = btoa(String.fromCharCode(...new Uint8Array(hash)));
+
+      const codeIndex = twoFaData.recovery_codes_hashed.indexOf(tokenHash);
+      if (codeIndex !== -1) {
+        // Valid recovery code - consume it
+        const updatedCodes = [...twoFaData.recovery_codes_hashed];
+        updatedCodes.splice(codeIndex, 1);
+
+        await supabase
+          .from('user_2fa')
+          .update({ recovery_codes_hashed: updatedCodes })
+          .eq('user_id', user.id);
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid recovery code' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // TOTP verification
     const totp = new OTPAuth.TOTP({
       secret: OTPAuth.Secret.fromBase32(twoFaData.secret),
       digits: 6,
       period: 30,
     });
-    
+
     const delta = totp.validate({ token, window: 1 });
-    
+
     if (delta === null) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid token' }),
