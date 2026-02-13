@@ -10,6 +10,7 @@ interface HamburgerMenuProps {
 }
 
 const menuItems = [
+  { to: '/members', icon: Users, label: 'All Members' },
   { to: '/achievements', icon: Award, label: 'Achievements' },
   { to: '/announcements', icon: Bell, label: 'Announcements' },
   { to: '/donations', icon: Heart, label: 'Donations' },

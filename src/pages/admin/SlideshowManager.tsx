@@ -22,6 +22,7 @@ interface Slideshow {
   display_order: number;
   start_date: string | null;
   end_date: string | null;
+  link_url: string | null;
   created_by: string;
   created_at: string;
 }
@@ -40,6 +41,7 @@ export default function SlideshowManager() {
   const [isActive, setIsActive] = useState(true);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
 
   const { data: slideshows, isLoading } = useQuery({
     queryKey: ['admin-slideshows'],
@@ -55,7 +57,7 @@ export default function SlideshowManager() {
   });
 
   const createSlideshow = useMutation({
-    mutationFn: async (data: { title: string; description: string | null; image_url: string; is_active: boolean; start_date: string | null; end_date: string | null }) => {
+    mutationFn: async (data: { title: string; description: string | null; image_url: string; is_active: boolean; start_date: string | null; end_date: string | null; link_url: string | null }) => {
       const maxOrder = slideshows?.reduce((max, s) => Math.max(max, s.display_order || 0), 0) || 0;
       
       const { error } = await supabase
@@ -67,6 +69,7 @@ export default function SlideshowManager() {
           is_active: data.is_active,
           start_date: data.start_date,
           end_date: data.end_date,
+          link_url: data.link_url,
           created_by: user?.id!,
           display_order: maxOrder + 1,
         });
@@ -142,6 +145,7 @@ export default function SlideshowManager() {
     setIsActive(true);
     setStartDate('');
     setEndDate('');
+    setLinkUrl('');
     setEditingSlide(null);
   };
 
@@ -153,6 +157,7 @@ export default function SlideshowManager() {
     setIsActive(slide.is_active);
     setStartDate(slide.start_date ? format(new Date(slide.start_date), 'yyyy-MM-dd') : '');
     setEndDate(slide.end_date ? format(new Date(slide.end_date), 'yyyy-MM-dd') : '');
+    setLinkUrl(slide.link_url || '');
     setDialogOpen(true);
   };
 
@@ -169,6 +174,7 @@ export default function SlideshowManager() {
       is_active: isActive,
       start_date: startDate || null,
       end_date: endDate || null,
+      link_url: linkUrl || null,
     };
 
     if (editingSlide) {
@@ -302,6 +308,15 @@ export default function SlideshowManager() {
                     onChange={(e) => setEndDate(e.target.value)}
                   />
                 </div>
+              </div>
+              <div>
+                <Label>Link URL (optional)</Label>
+                <Input
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://... or /events"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Users will be redirected when clicking this slide</p>
               </div>
               <div className="flex items-center gap-2">
                 <Switch

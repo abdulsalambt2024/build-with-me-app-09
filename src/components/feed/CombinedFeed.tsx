@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Heart, MessageCircle, Trophy, Megaphone, Calendar, MoreVertical, Pencil, Trash2, Share2, Pin, Send, X } from 'lucide-react';
+import { ImageViewer } from '@/components/posts/ImageViewer';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
@@ -80,6 +81,9 @@ export function CombinedFeed() {
   const [showCommentsDialog, setShowCommentsDialog] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
   
   const canEdit = role !== 'viewer';
   const isSuperAdmin = role === 'super_admin';
@@ -526,11 +530,15 @@ export function CombinedFeed() {
               {item.media_urls && item.media_urls.length > 0 && (
                 <div className={`grid gap-1 ${item.media_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   {item.media_urls.slice(0, 4).map((url, idx) => (
-                    <div key={idx} className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+                    <div 
+                      key={idx} 
+                      className="relative aspect-video rounded-lg overflow-hidden bg-muted cursor-pointer"
+                      onClick={() => { setViewerImages(item.media_urls!); setViewerIndex(idx); setViewerOpen(true); }}
+                    >
                       <img 
                         src={url} 
                         alt="" 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover hover:scale-105 transition-transform"
                         loading="lazy"
                       />
                       {item.media_urls!.length > 4 && idx === 3 && (
@@ -663,7 +671,7 @@ export function CombinedFeed() {
             ) : (
               <div className="space-y-3">
                 {comments?.map((c) => (
-                  <div key={c.id} className="flex gap-2">
+                  <div key={c.id} className="flex gap-2 group">
                     <Avatar className="h-7 w-7 flex-shrink-0">
                       <AvatarImage src={c.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">{c.user_name?.charAt(0)}</AvatarFallback>
@@ -675,6 +683,21 @@ export function CombinedFeed() {
                         <span className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
                         </span>
+                        {(c.user_id === user?.id || isSuperAdmin) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+                            onClick={async () => {
+                              await supabase.from('comments').delete().eq('id', c.id);
+                              refetchComments();
+                              queryClient.invalidateQueries({ queryKey: ['combined-feed'] });
+                              toast({ title: 'Comment deleted' });
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">{c.content}</p>
                     </div>
@@ -711,6 +734,14 @@ export function CombinedFeed() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Image Viewer */}
+      <ImageViewer
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+      />
     </div>
   );
 }

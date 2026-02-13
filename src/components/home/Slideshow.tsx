@@ -9,6 +9,7 @@ interface Slide {
   description: string | null;
   image_url: string;
   display_order: number;
+  link_url?: string | null;
 }
 export function Slideshow() {
   const [slides, setSlides] = useState<Slide[]>([]);
@@ -51,8 +52,19 @@ export function Slideshow() {
     setCurrentIndex(prev => (prev + 1) % slides.length);
   };
   if (slides.length === 0) return null;
+  const handleSlideClick = () => {
+    const link = slides[currentIndex]?.link_url;
+    if (link) {
+      if (link.startsWith('http')) {
+        window.open(link, '_blank');
+      } else {
+        window.location.href = link;
+      }
+    }
+  };
+
   return <Card className="relative overflow-hidden">
-      <div className="relative aspect-video w-full">
+      <div className="relative aspect-video w-full" onClick={handleSlideClick} style={{ cursor: slides[currentIndex]?.link_url ? 'pointer' : 'default' }}>
         <img src={slides[currentIndex].image_url} alt={slides[currentIndex].title} className="w-full h-full object-cover" />
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
           <h3 className="text-white font-bold mb-2 text-center font-serif text-lg">

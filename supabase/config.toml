@@ -4,13 +4,13 @@ project_id = "hbkptilrqqsqjlkabpbe"
 verify_jwt = true
 
 [functions.setup-2fa]
-verify_jwt = true
+verify_jwt = false
 
 [functions.verify-2fa]
-verify_jwt = true
+verify_jwt = false
 
 [functions.disable-2fa]
-verify_jwt = true
+verify_jwt = false
 
 [functions.ai-studio]
 verify_jwt = true
@@ -35,3 +35,12 @@ verify_jwt = false
 
 [functions.text-to-speech]
 verify_jwt = true
+
+[functions.verify-login-2fa]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.set-user-role]
+verify_jwt = false
