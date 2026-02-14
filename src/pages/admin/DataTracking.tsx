@@ -14,7 +14,7 @@ export default function DataTracking() {
   const { data, isLoading } = useQuery({
     queryKey: ['data-tracking'],
     queryFn: async () => {
-      const [profilesRes, postsRes, eventsRes, tasksRes, attendanceRes, rolesRes, rsvpsRes] = await Promise.all([
+      const [profilesRes, postsRes, eventsRes, tasksRes, attendanceRes, rolesRes, rsvpsRes, achievementsRes] = await Promise.all([
         supabase.from('profiles').select('user_id, full_name, avatar_url, created_at'),
         supabase.from('posts').select('id, user_id, title, created_at'),
         supabase.from('events').select('id, title, event_date, attendees_count'),
@@ -22,6 +22,7 @@ export default function DataTracking() {
         supabase.from('attendance').select('user_id, status, date'),
         supabase.from('user_roles').select('user_id, role'),
         supabase.from('event_rsvps').select('user_id, event_id, status'),
+        supabase.from('achievements').select('user_id, achievement_type'),
       ]);
 
       const profiles = profilesRes.data || [];
@@ -30,7 +31,7 @@ export default function DataTracking() {
       const attendance = attendanceRes.data || [];
       const roles = rolesRes.data || [];
       const rsvps = rsvpsRes.data || [];
-
+      const achievements = achievementsRes.data || [];
       const roleMap = new Map(roles.map(r => [r.user_id, r.role]));
 
       // Build per-user stats
@@ -41,7 +42,7 @@ export default function DataTracking() {
         const userAttendance = attendance.filter(a => a.user_id === p.user_id);
         const presentCount = userAttendance.filter(a => a.status === 'present').length;
         const eventsParticipated = rsvps.filter(r => r.user_id === p.user_id && r.status === 'going').length;
-
+        const badgesEarned = achievements.filter(a => a.user_id === p.user_id).length;
         return {
           user_id: p.user_id,
           full_name: p.full_name || 'Unknown',
@@ -53,6 +54,7 @@ export default function DataTracking() {
           attendance_present: presentCount,
           attendance_pct: userAttendance.length > 0 ? Math.round((presentCount / userAttendance.length) * 100) : 0,
           events_participated: eventsParticipated,
+          badges_earned: badgesEarned,
           joined: p.created_at,
         };
       });
@@ -92,10 +94,10 @@ export default function DataTracking() {
 
   const downloadCSV = () => {
     if (!data?.userStats) return;
-    const headers = ['Name', 'Role', 'Posts', 'Tasks Total', 'Tasks Completed', 'Attendance %', 'Events Participated', 'Joined'];
+    const headers = ['Name', 'Role', 'Posts', 'Tasks Total', 'Tasks Completed', 'Attendance %', 'Events Participated', 'Badges Earned', 'Joined'];
     const rows = data.userStats.map(u => [
       u.full_name, u.role, u.posts, u.tasks_total, u.tasks_completed,
-      u.attendance_pct + '%', u.events_participated, new Date(u.joined).toLocaleDateString()
+      u.attendance_pct + '%', u.events_participated, u.badges_earned, new Date(u.joined).toLocaleDateString()
     ]);
     const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -169,6 +171,7 @@ export default function DataTracking() {
                     <TableHead className="text-center">Tasks</TableHead>
                     <TableHead className="text-center">Attendance</TableHead>
                     <TableHead className="text-center">Events</TableHead>
+                    <TableHead className="text-center">Badges</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -184,6 +187,7 @@ export default function DataTracking() {
                       <TableCell className="text-center">{u.tasks_completed}/{u.tasks_total}</TableCell>
                       <TableCell className="text-center">{u.attendance_pct}%</TableCell>
                       <TableCell className="text-center">{u.events_participated}</TableCell>
+                      <TableCell className="text-center">{u.badges_earned}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

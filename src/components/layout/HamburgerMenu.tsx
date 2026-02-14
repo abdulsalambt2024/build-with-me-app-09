@@ -1,4 +1,4 @@
-import { X, Award, Bell, Heart, Palette, Settings, Users, HelpCircle, LogOut } from 'lucide-react';
+import { X, Award, Bell, Heart, Palette, Settings, Users, HelpCircle, LogOut, BookOpen } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -20,6 +20,7 @@ const menuItems = [
 
 const bottomItems = [
   { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/guide', icon: BookOpen, label: 'App Guide' },
   { to: '/help', icon: HelpCircle, label: 'Help' },
 ];
 

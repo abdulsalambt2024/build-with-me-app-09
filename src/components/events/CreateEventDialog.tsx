@@ -157,9 +157,11 @@ export function CreateEventDialog() {
   };
   return <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Event
+        <Button variant="outline" className="h-auto flex-col gap-2 py-4 border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Plus className="h-5 w-5 text-primary" />
+          </div>
+          <span className="text-xs font-medium">Create Event</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
