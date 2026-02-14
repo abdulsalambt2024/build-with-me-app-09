@@ -7,19 +7,22 @@ export default function Admin() {
   const { role } = useAuth();
   const navigate = useNavigate();
 
+  const isSuperAdmin = role === 'super_admin';
+
   const adminCards = [
-    { title: 'User Management', description: 'Manage users and permissions', icon: Users, path: '/admin/users' },
+    ...(isSuperAdmin ? [{ title: 'User Management', description: 'Add, delete, edit users & passwords', icon: Users, path: '/admin/users' }] : []),
     { title: 'Role Assignment', description: 'Assign roles to users', icon: UserCog, path: '/admin/roles' },
+    ...(isSuperAdmin ? [{ title: 'Achievement Awards', description: 'Award custom badges to members', icon: Shield, path: '/admin/achievement-awards' }] : []),
     { title: 'Task Assignment', description: 'Assign and manage tasks', icon: ClipboardList, path: '/admin/task-assignment' },
     { title: 'Data Tracking', description: 'User activity & performance data', icon: Database, path: '/admin/data-tracking' },
     { title: 'Content Moderation', description: 'Review and moderate content', icon: FileText, path: '/admin/moderation' },
     { title: 'Analytics', description: 'View engagement metrics', icon: BarChart3, path: '/admin/analytics' },
     { title: 'Attendance', description: 'Mark and track attendance', icon: CalendarCheck, path: '/admin/attendance' },
     { title: 'Slideshow Manager', description: 'Manage homepage slideshow', icon: Image, path: '/admin/slideshow' },
-    { title: 'Popup Messages', description: 'Schedule greetings', icon: Bell, path: '/admin/popups' },
-    { title: 'Badge Management', description: 'Grant verification badges', icon: Shield, path: '/admin/badges' },
+    ...(isSuperAdmin ? [{ title: 'Popup Messages', description: 'Schedule greetings', icon: Bell, path: '/admin/popups' }] : []),
+    ...(isSuperAdmin ? [{ title: 'Badge Management', description: 'Grant verification badges', icon: Shield, path: '/admin/badges' }] : []),
     { title: 'PARI FAQ Management', description: 'Customize chatbot knowledge', icon: MessageSquare, path: '/admin/chatbot-faq' },
-    { title: 'Error Logs', description: 'Monitor application errors', icon: Bug, path: '/admin/errors' },
+    ...(isSuperAdmin ? [{ title: 'Error Logs', description: 'Monitor application errors', icon: Bug, path: '/admin/errors' }] : []),
     { title: 'Payment Transactions', description: 'View and verify payments', icon: CreditCard, path: '/admin/payments' },
     { title: 'System Settings', description: 'Configure app settings', icon: SettingsIcon, path: '/admin/settings' },
   ];

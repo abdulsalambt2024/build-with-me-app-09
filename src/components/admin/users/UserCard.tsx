@@ -3,7 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, Eye, UserCog, Ban, CheckCircle } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Trash2, Eye, UserCog, Ban, CheckCircle, MoreVertical, KeyRound } from 'lucide-react';
 
 export interface UserWithRole {
   id: string;
@@ -30,6 +31,7 @@ interface UserCardProps {
   onEdit: (user: UserWithRole) => void;
   onDelete: (user: UserWithRole) => void;
   onToggleDisable: (user: UserWithRole) => void;
+  onResetPassword?: (user: UserWithRole) => void;
 }
 
 const getRoleBadgeVariant = (role: string) => {
@@ -51,94 +53,65 @@ const getRoleLabel = (role: string) => {
 };
 
 export const UserCard = memo(({ 
-  user, 
-  isSuperAdmin, 
-  onView, 
-  onEdit, 
-  onDelete,
-  onToggleDisable 
+  user, isSuperAdmin, onView, onEdit, onDelete, onToggleDisable, onResetPassword
 }: UserCardProps) => {
   return (
     <Card className={user.is_disabled ? 'opacity-60 border-destructive/30' : ''}>
-      <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6">
-        <div className="flex items-center gap-4 min-w-0">
-          <Avatar className="h-12 w-12">
+      <CardContent className="flex items-center justify-between p-4 gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src={user.avatar_url || ''} />
-            <AvatarFallback>
-              {user.full_name?.[0] || 'U'}
-            </AvatarFallback>
+            <AvatarFallback>{user.full_name?.[0] || 'U'}</AvatarFallback>
           </Avatar>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold">{user.full_name || 'Unknown User'}</h3>
-              {user.is_disabled && (
-                <Badge variant="destructive" className="text-xs">Disabled</Badge>
-              )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-sm truncate">{user.full_name || 'Unknown'}</h3>
+              {user.is_disabled && <Badge variant="destructive" className="text-[10px] px-1.5">Disabled</Badge>}
             </div>
-            <p className="text-sm text-muted-foreground">
-              {user.course && user.branch 
-                ? `${user.course} - ${user.branch}` 
-                : 'Joined ' + new Date(user.created_at).toLocaleDateString()}
-            </p>
-            {user.roll_number && (
-              <p className="text-xs text-muted-foreground">Roll: {user.roll_number}</p>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant={getRoleBadgeVariant(user.role)} className="text-[10px]">
+                {getRoleLabel(user.role)}
+              </Badge>
+              {user.branch && <span className="text-xs text-muted-foreground">{user.branch}</span>}
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Badge variant={getRoleBadgeVariant(user.role)}>
-            {getRoleLabel(user.role)}
-          </Badge>
-          
-          {isSuperAdmin && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onView(user)}
-              title="View Details"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-          )}
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onEdit(user)}
-            className="flex-1 sm:flex-none"
-          >
-            <UserCog className="h-4 w-4 mr-1" />
-            Edit Role
-          </Button>
 
-          {isSuperAdmin && user.role !== 'super_admin' && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onToggleDisable(user)}
-                title={user.is_disabled ? 'Enable User' : 'Disable User'}
-                className={user.is_disabled ? 'text-green-600' : 'text-amber-600'}
-              >
-                {user.is_disabled ? (
-                  <CheckCircle className="h-4 w-4" />
-                ) : (
-                  <Ban className="h-4 w-4" />
-                )}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive"
-                onClick={() => onDelete(user)}
-                title="Remove User Permanently"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="shrink-0">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onView(user)}>
+              <Eye className="h-4 w-4 mr-2" /> View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEdit(user)}>
+              <UserCog className="h-4 w-4 mr-2" /> Edit Role
+            </DropdownMenuItem>
+            {isSuperAdmin && onResetPassword && (
+              <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                <KeyRound className="h-4 w-4 mr-2" /> Reset Password
+              </DropdownMenuItem>
+            )}
+            {isSuperAdmin && user.role !== 'super_admin' && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onToggleDisable(user)}>
+                  {user.is_disabled ? (
+                    <><CheckCircle className="h-4 w-4 mr-2 text-green-600" /> Enable Account</>
+                  ) : (
+                    <><Ban className="h-4 w-4 mr-2 text-amber-600" /> Disable Account</>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDelete(user)} className="text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete Permanently
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardContent>
     </Card>
   );

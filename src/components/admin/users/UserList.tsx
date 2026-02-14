@@ -12,6 +12,7 @@ interface UserListProps {
   onEdit: (user: UserWithRole) => void;
   onDelete: (user: UserWithRole) => void;
   onToggleDisable: (user: UserWithRole) => void;
+  onResetPassword?: (user: UserWithRole) => void;
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -46,6 +47,7 @@ export function UserList({
   onEdit,
   onDelete,
   onToggleDisable,
+  onResetPassword,
   page,
   totalPages,
   onPageChange,
@@ -83,34 +85,22 @@ export function UserList({
             onEdit={onEdit}
             onDelete={onDelete}
             onToggleDisable={onToggleDisable}
+            onResetPassword={onResetPassword}
           />
         ))}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-4">
           <p className="text-sm text-muted-foreground">
             Showing {(page - 1) * 20 + 1} - {Math.min(page * 20, totalCount)} of {totalCount}
           </p>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page <= 1}
-            >
+            <Button variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm">
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(page + 1)}
-              disabled={page >= totalPages}
-            >
+            <span className="text-sm">Page {page} of {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
