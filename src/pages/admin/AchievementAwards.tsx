@@ -43,13 +43,26 @@ export default function AchievementAwards() {
   const { data: recentAwards, isLoading } = useQuery({
     queryKey: ['recent-achievement-awards'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: achievements } = await supabase
         .from('achievements')
-        .select('*, profiles!achievements_user_id_fkey(full_name, avatar_url)')
+        .select('*')
         .eq('achievement_type', 'awarded')
         .order('earned_at', { ascending: false })
         .limit(50);
-      return data || [];
+
+      if (!achievements || achievements.length === 0) return [];
+
+      const userIds = [...new Set(achievements.map(a => a.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', userIds);
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return achievements.map(a => ({
+        ...a,
+        profiles: profileMap.get(a.user_id) || { full_name: 'Unknown', avatar_url: null },
+      }));
     },
     enabled: isSuperAdmin,
   });
