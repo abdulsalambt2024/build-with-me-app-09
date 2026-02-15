@@ -19,18 +19,35 @@ export function useAchievements(userId?: string) {
   return useQuery({
     queryKey: ['achievements', userId],
     queryFn: async () => {
+      // First fetch achievements
       let query = supabase
         .from('achievements')
-        .select('*, profiles!inner(full_name, avatar_url)')
+        .select('*')
         .order('earned_at', { ascending: false });
 
       if (userId) {
         query = query.eq('user_id', userId);
       }
 
-      const { data, error } = await query;
+      const { data: achievements, error } = await query;
       if (error) throw error;
-      return data as Achievement[];
+      if (!achievements || achievements.length === 0) return [];
+
+      // Fetch profiles for all unique user_ids
+      const userIds = [...new Set(achievements.map(a => a.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return achievements.map(a => ({
+        ...a,
+        profiles: profileMap.get(a.user_id) || { full_name: 'Unknown', avatar_url: null },
+      })) as Achievement[];
+
+      
     },
   });
 }

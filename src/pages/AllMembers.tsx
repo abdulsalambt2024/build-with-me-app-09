@@ -1,15 +1,23 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, Users, Mail, BookOpen, Calendar } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, Users, BookOpen, Calendar, MoreVertical, Trash2, KeyRound, UserCog, UserPlus, Loader2 } from 'lucide-react';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import { AddUserDialog } from '@/components/admin/AddUserDialog';
+import { EditRoleDialog } from '@/components/admin/EditRoleDialog';
 
 interface MemberProfile {
   user_id: string;
@@ -26,9 +34,17 @@ interface MemberProfile {
 }
 
 export default function AllMembers() {
+  const { role: currentRole } = useAuth();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [selectedMember, setSelectedMember] = useState<MemberProfile | null>(null);
+  const [deletingUser, setDeletingUser] = useState<MemberProfile | null>(null);
+  const [editingUser, setEditingUser] = useState<MemberProfile | null>(null);
+  const [resetUser, setResetUser] = useState<MemberProfile | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+
+  const isSuperAdmin = currentRole === 'super_admin';
 
   const { data: members, isLoading } = useQuery({
     queryKey: ['all-members'],
@@ -38,22 +54,40 @@ export default function AllMembers() {
         .select('user_id, full_name, avatar_url, bio, branch, course, semester, year, roll_number, created_at')
         .eq('is_disabled', false)
         .order('full_name');
-
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
+      const { data: roles } = await supabase.from('user_roles').select('user_id, role');
       const roleMap = new Map(roles?.map(r => [r.user_id, r.role]));
-
-      return profiles?.map(p => ({
-        ...p,
-        role: roleMap.get(p.user_id) || 'viewer'
-      })) as MemberProfile[];
+      return profiles?.map(p => ({ ...p, role: roleMap.get(p.user_id) || 'viewer' })) as MemberProfile[];
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.functions.invoke('delete-user', { body: { userId } });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-members'] });
+      toast.success('User deleted permanently');
+      setDeletingUser(null);
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to delete user'),
+  });
+
+  const resetPwMutation = useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
+      const { error } = await supabase.functions.invoke('reset-user-password', { body: { userId, newPassword } });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Password reset successfully');
+      setResetUser(null);
+      setNewPassword('');
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to reset password'),
+  });
+
   const filtered = members?.filter(m => {
-    const matchesSearch = !search || 
+    const matchesSearch = !search ||
       m.full_name?.toLowerCase().includes(search.toLowerCase()) ||
       m.branch?.toLowerCase().includes(search.toLowerCase()) ||
       m.roll_number?.toLowerCase().includes(search.toLowerCase());
@@ -63,32 +97,29 @@ export default function AllMembers() {
 
   const getRoleBadge = (role?: string) => {
     const colors: Record<string, string> = {
-      super_admin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-      admin: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      member: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      viewer: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+      super_admin: 'bg-destructive/10 text-destructive',
+      admin: 'bg-primary/10 text-primary',
+      member: 'bg-green-500/10 text-green-700 dark:text-green-400',
+      viewer: 'bg-muted text-muted-foreground',
     };
-    const labels: Record<string, string> = {
-      super_admin: 'Super Admin', admin: 'Admin', member: 'Member', viewer: 'Viewer'
-    };
-    return (
-      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[role || 'viewer']}`}>
-        {labels[role || 'viewer']}
-      </span>
-    );
+    const labels: Record<string, string> = { super_admin: 'Super Admin', admin: 'Admin', member: 'Member', viewer: 'Viewer' };
+    return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[role || 'viewer']}`}>{labels[role || 'viewer']}</span>;
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <div className="container max-w-4xl mx-auto p-4 pb-24 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary shadow-lg">
-            <Users className="h-5 w-5 text-primary-foreground" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary shadow-lg">
+              <Users className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">All Members</h1>
+              <p className="text-xs text-muted-foreground">{filtered?.length || 0} members</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold">All Members</h1>
-            <p className="text-xs text-muted-foreground">{filtered?.length || 0} members</p>
-          </div>
+          {isSuperAdmin && <AddUserDialog />}
         </div>
 
         <Card className="border-0 shadow-lg">
@@ -99,9 +130,7 @@ export default function AllMembers() {
                 <Input placeholder="Search by name, branch, roll..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 border-0 bg-muted/50" />
               </div>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-[120px] border-0 bg-muted/50">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="w-[120px] border-0 bg-muted/50"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="super_admin">Super Admin</SelectItem>
@@ -123,20 +152,14 @@ export default function AllMembers() {
         ) : (
           <div className="space-y-2">
             {filtered?.map(member => (
-              <Card 
-                key={member.user_id} 
-                className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => setSelectedMember(member)}
-              >
+              <Card key={member.user_id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-3">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-10 w-10 cursor-pointer" onClick={() => setSelectedMember(member)}>
                       <AvatarImage src={member.avatar_url || undefined} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                        {member.full_name?.[0]?.toUpperCase() || '?'}
-                      </AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary font-medium">{member.full_name?.[0]?.toUpperCase() || '?'}</AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedMember(member)}>
                       <div className="flex items-center gap-1.5">
                         <p className="font-medium text-sm truncate">{member.full_name || 'Unknown'}</p>
                         <VerifiedBadge userId={member.user_id} size="sm" />
@@ -146,6 +169,29 @@ export default function AllMembers() {
                         {member.branch && <span className="text-xs text-muted-foreground">{member.branch}</span>}
                       </div>
                     </div>
+                    {isSuperAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="shrink-0"><MoreVertical className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditingUser(member)}>
+                            <UserCog className="h-4 w-4 mr-2" /> Edit Role
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setResetUser(member)}>
+                            <KeyRound className="h-4 w-4 mr-2" /> Reset Password
+                          </DropdownMenuItem>
+                          {member.role !== 'super_admin' && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setDeletingUser(member)} className="text-destructive focus:text-destructive">
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -159,17 +205,13 @@ export default function AllMembers() {
         {/* Profile Dialog */}
         <Dialog open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
           <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Member Profile</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Member Profile</DialogTitle></DialogHeader>
             {selectedMember && (
               <div className="space-y-4">
                 <div className="flex flex-col items-center gap-3">
                   <Avatar className="h-20 w-20">
                     <AvatarImage src={selectedMember.avatar_url || undefined} />
-                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                      {selectedMember.full_name?.[0]?.toUpperCase() || '?'}
-                    </AvatarFallback>
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">{selectedMember.full_name?.[0]?.toUpperCase() || '?'}</AvatarFallback>
                   </Avatar>
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1.5">
@@ -181,19 +223,66 @@ export default function AllMembers() {
                 </div>
                 {selectedMember.bio && <p className="text-sm text-muted-foreground text-center">{selectedMember.bio}</p>}
                 <div className="space-y-2 text-sm">
-                  {selectedMember.course && (
-                    <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-muted-foreground" /><span>{selectedMember.course}</span></div>
-                  )}
-                  {selectedMember.branch && (
-                    <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-muted-foreground" /><span>{selectedMember.branch} {selectedMember.semester && `• Sem ${selectedMember.semester}`}</span></div>
-                  )}
-                  {selectedMember.roll_number && (
-                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" /><span>Roll: {selectedMember.roll_number}</span></div>
-                  )}
+                  {selectedMember.course && <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-muted-foreground" /><span>{selectedMember.course}</span></div>}
+                  {selectedMember.branch && <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-muted-foreground" /><span>{selectedMember.branch} {selectedMember.semester && `• Sem ${selectedMember.semester}`}</span></div>}
+                  {selectedMember.roll_number && <div className="flex items-center gap-2"><span className="text-muted-foreground font-medium">Roll:</span><span>{selectedMember.roll_number}</span></div>}
                   <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /><span>Joined {new Date(selectedMember.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span></div>
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Role Dialog */}
+        {editingUser && (
+          <EditRoleDialog
+            user={{ id: '', user_id: editingUser.user_id, full_name: editingUser.full_name, role: (editingUser.role || 'viewer') as any }}
+            open={!!editingUser}
+            onOpenChange={(open) => { if (!open) setEditingUser(null); }}
+          />
+        )}
+
+        {/* Delete Dialog */}
+        <AlertDialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete User Permanently</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete <strong>{deletingUser?.full_name}</strong> and all their data. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deletingUser && deleteMutation.mutate(deletingUser.user_id)}>
+                Delete Permanently
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Reset Password Dialog */}
+        <Dialog open={!!resetUser} onOpenChange={(open) => { if (!open) { setResetUser(null); setNewPassword(''); } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5" /> Reset Password</DialogTitle>
+              <DialogDescription>Set a new password for <strong>{resetUser?.full_name}</strong></DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>New Password</Label>
+                <Input type="password" placeholder="Min 6 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => { setResetUser(null); setNewPassword(''); }}>Cancel</Button>
+                <Button
+                  onClick={() => resetUser && resetPwMutation.mutate({ userId: resetUser.user_id, newPassword })}
+                  disabled={newPassword.length < 6 || resetPwMutation.isPending}
+                >
+                  {resetPwMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Reset Password
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
