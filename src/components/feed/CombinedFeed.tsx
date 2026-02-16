@@ -9,9 +9,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageCircle, Trophy, Megaphone, Calendar, MoreVertical, Pencil, Trash2, Share2, Pin, Send, X } from 'lucide-react';
+import { Heart, MessageCircle, Trophy, Megaphone, Calendar, MoreVertical, Pencil, Trash2, Share2, Pin, Send, X, AlertTriangle } from 'lucide-react';
 import { ImageViewer } from '@/components/posts/ImageViewer';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
@@ -84,6 +85,7 @@ export function CombinedFeed() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerImages, setViewerImages] = useState<string[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [deleteConfirm, setDeleteConfirm] = useState<FeedItem | null>(null);
   
   const canEdit = role !== 'viewer';
   const isSuperAdmin = role === 'super_admin';
@@ -362,22 +364,28 @@ export function CombinedFeed() {
     }
   });
 
-  const handleDelete = async (item: FeedItem) => {
-    const canDelete = item.user_id === user?.id || isSuperAdmin || (isAdmin && ['post', 'announcement'].includes(item.type));
-    if (!canDelete) return;
+  const handleDeleteConfirmed = async () => {
+    if (!deleteConfirm) return;
+    const item = deleteConfirm;
+    setDeleteConfirm(null);
 
     let error;
     switch (item.type) {
       case 'post':
+        // Delete related data first
+        await supabase.from('comments').delete().eq('post_id', item.id);
+        await supabase.from('post_likes').delete().eq('post_id', item.id);
         ({ error } = await supabase.from('posts').delete().eq('id', item.id));
         break;
       case 'achievement':
         ({ error } = await supabase.from('achievements').delete().eq('id', item.id));
         break;
       case 'announcement':
+        await supabase.from('announcement_reads').delete().eq('announcement_id', item.id);
         ({ error } = await supabase.from('announcements').delete().eq('id', item.id));
         break;
       case 'event':
+        await supabase.from('event_rsvps').delete().eq('event_id', item.id);
         ({ error } = await supabase.from('events').delete().eq('id', item.id));
         break;
     }
@@ -385,7 +393,7 @@ export function CombinedFeed() {
     if (error) {
       toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
     } else {
-      toast({ title: 'Deleted', description: 'Item removed successfully' });
+      toast({ title: 'Permanently deleted', description: `${item.type.charAt(0).toUpperCase() + item.type.slice(1)} has been permanently removed.` });
       refetch();
     }
   };
@@ -513,7 +521,7 @@ export function CombinedFeed() {
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive gap-2"
-                          onClick={() => handleDelete(item)}
+                          onClick={() => setDeleteConfirm(item)}
                         >
                           <Trash2 className="h-4 w-4" /> Delete
                         </DropdownMenuItem>
@@ -742,6 +750,25 @@ export function CombinedFeed() {
         open={viewerOpen}
         onOpenChange={setViewerOpen}
       />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently delete this {deleteConfirm?.type}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. "{deleteConfirm?.title}" will be permanently removed along with all related data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirmed}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
