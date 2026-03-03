@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageCircle, Trophy, Megaphone, Calendar, MoreVertical, Pencil, Trash2, Share2, Pin, Send, X, AlertTriangle } from 'lucide-react';
+import { Heart, MessageCircle, Megaphone, Calendar, MoreVertical, Pencil, Trash2, Share2, Pin, Send, X, AlertTriangle } from 'lucide-react';
 import { ImageViewer } from '@/components/posts/ImageViewer';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,7 @@ import { VerifiedBadge } from '@/components/VerifiedBadge';
 
 interface FeedItem {
   id: string;
-  type: 'post' | 'achievement' | 'announcement' | 'event';
+  type: 'post' | 'announcement' | 'event';
   title: string;
   content: string;
   created_at: string;
@@ -76,7 +76,7 @@ export function CombinedFeed() {
   const { user, role } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<'all' | 'post' | 'achievement' | 'announcement'>('all');
+  const [filter, setFilter] = useState<'all' | 'post' | 'announcement'>('all');
   const [page, setPage] = useState(0);
   const [showLikesDialog, setShowLikesDialog] = useState<string | null>(null);
   const [showCommentsDialog, setShowCommentsDialog] = useState<string | null>(null);
@@ -108,14 +108,7 @@ export function CombinedFeed() {
         );
       }
       
-      if (filter === 'all' || filter === 'achievement') {
-        queries.push(
-          supabase.from('achievements')
-            .select('*')
-            .order('earned_at', { ascending: false })
-            .limit(pageSize)
-        );
-      }
+      // Achievements removed from feed
       
       if (filter === 'all' || filter === 'announcement') {
         queries.push(
@@ -186,21 +179,7 @@ export function CombinedFeed() {
         });
       }
 
-      if (filter === 'all' || filter === 'achievement') {
-        const achievementsRes = results[resultIndex++];
-        achievementsRes.data?.forEach((a: any) => {
-          items.push({
-            id: a.id,
-            type: 'achievement',
-            title: a.title,
-            content: a.description || '',
-            created_at: a.earned_at || new Date().toISOString(),
-            user_id: a.user_id,
-            user_name: profileMap.get(a.user_id)?.full_name || 'Unknown',
-            avatar_url: profileMap.get(a.user_id)?.avatar_url
-          });
-        });
-      }
+      // Achievements removed from feed
 
       if (filter === 'all' || filter === 'announcement') {
         const announcementsRes = results[resultIndex++];
@@ -377,9 +356,7 @@ export function CombinedFeed() {
         await supabase.from('post_likes').delete().eq('post_id', item.id);
         ({ error } = await supabase.from('posts').delete().eq('id', item.id));
         break;
-      case 'achievement':
-        ({ error } = await supabase.from('achievements').delete().eq('id', item.id));
-        break;
+      // achievement removed from feed
       case 'announcement':
         await supabase.from('announcement_reads').delete().eq('announcement_id', item.id);
         ({ error } = await supabase.from('announcements').delete().eq('id', item.id));
@@ -420,7 +397,6 @@ export function CombinedFeed() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'post': return <MessageCircle className="h-3 w-3" />;
-      case 'achievement': return <Trophy className="h-3 w-3" />;
       case 'announcement': return <Megaphone className="h-3 w-3" />;
       case 'event': return <Calendar className="h-3 w-3" />;
       default: return null;
@@ -430,7 +406,6 @@ export function CombinedFeed() {
   const getTypeBadge = (type: string, priority?: string, isPinned?: boolean) => {
     const colors: Record<string, string> = {
       post: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-      achievement: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
       announcement: priority === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
       event: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
     };
@@ -463,10 +438,9 @@ export function CombinedFeed() {
     <div className="space-y-4">
       {/* Filter Tabs */}
       <Tabs value={filter} onValueChange={(v) => { setFilter(v as typeof filter); setPage(0); }}>
-        <TabsList className="grid grid-cols-4 w-full">
+        <TabsList className="grid grid-cols-3 w-full">
           <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
           <TabsTrigger value="post" className="text-xs">Posts</TabsTrigger>
-          <TabsTrigger value="achievement" className="text-xs">Achievements</TabsTrigger>
           <TabsTrigger value="announcement" className="text-xs">Announcements</TabsTrigger>
         </TabsList>
       </Tabs>
@@ -536,26 +510,21 @@ export function CombinedFeed() {
               <p className="text-sm text-muted-foreground line-clamp-3">{item.content}</p>
               
               {item.media_urls && item.media_urls.length > 0 && (
-                <div className={`grid gap-1 ${item.media_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                  {item.media_urls.slice(0, 4).map((url, idx) => (
-                    <div 
-                      key={idx} 
-                      className="relative aspect-video rounded-lg overflow-hidden bg-muted cursor-pointer"
-                      onClick={() => { setViewerImages(item.media_urls!); setViewerIndex(idx); setViewerOpen(true); }}
-                    >
-                      <img 
-                        src={url} 
-                        alt="" 
-                        className="w-full h-full object-cover hover:scale-105 transition-transform"
-                        loading="lazy"
-                      />
-                      {item.media_urls!.length > 4 && idx === 3 && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <span className="text-white font-bold text-lg">+{item.media_urls!.length - 4}</span>
-                        </div>
-                      )}
+                <div 
+                  className="relative rounded-lg overflow-hidden bg-muted cursor-pointer aspect-video"
+                  onClick={() => { setViewerImages(item.media_urls!); setViewerIndex(0); setViewerOpen(true); }}
+                >
+                  <img 
+                    src={item.media_urls[0]} 
+                    alt="" 
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  {item.media_urls.length > 1 && (
+                    <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full font-medium">
+                      1/{item.media_urls.length}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
 
