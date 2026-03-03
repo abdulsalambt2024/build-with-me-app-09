@@ -13,7 +13,7 @@ import { chatbotMessageSchema } from '@/lib/validation';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useChatbotHistory } from '@/hooks/useChatbotHistory';
 import { QuickReplies } from './QuickReplies';
-import pariAvatar from '@/assets/pari-avatar.jpg';
+import pariCharacter from '@/assets/pari-character.png';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -30,13 +30,23 @@ export function EnhancedChatbot() {
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [speechBubbleText, setSpeechBubbleText] = useState('How can I help you? 💬');
+  const [isEditingBubble, setIsEditingBubble] = useState(false);
+  const [editBubbleText, setEditBubbleText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const isSuperAdmin = role === 'super_admin';
 
   const { 
     messages, setMessages, addMessage, saveConversation, 
     clearHistory, exportHistory, isLoadingHistory 
   } = useChatbotHistory(user?.id);
+
+  // Load custom bubble text from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('pari-speech-bubble');
+    if (saved) setSpeechBubbleText(saved);
+  }, []);
 
   const handleExport = async () => {
     const result = await exportHistory();
@@ -152,37 +162,75 @@ export function EnhancedChatbot() {
     setIsFullScreen(true);
   };
 
+  const handleBubbleClick = () => {
+    if (isSuperAdmin && !isOpen) {
+      setEditBubbleText(speechBubbleText);
+      setIsEditingBubble(true);
+    }
+  };
+
+  const saveBubbleText = () => {
+    setSpeechBubbleText(editBubbleText);
+    localStorage.setItem('pari-speech-bubble', editBubbleText);
+    setIsEditingBubble(false);
+    toast({ title: 'Updated', description: 'PARI speech bubble text updated.' });
+  };
+
   const chatWindowClasses = isFullScreen 
     ? 'fixed inset-0 z-50 flex flex-col bg-background'
     : 'fixed bottom-44 right-4 md:bottom-28 w-[calc(100%-2rem)] max-w-sm h-[450px] flex flex-col z-40 shadow-2xl border rounded-xl overflow-hidden bg-background';
 
   return (
     <>
-      {/* Floating PARI Button - Character Style */}
+      {/* Floating PARI Character - Full body, no background/circle */}
       <button
-        className={`fixed bottom-24 right-4 md:bottom-8 z-40 group transition-all duration-300 ease-out hover:scale-105
-          ${isSpeaking ? 'animate-pulse' : ''}
-          ${isOpen && !isFullScreen ? '' : ''}`}
+        className={`fixed bottom-20 right-2 md:bottom-6 z-40 group transition-all duration-300 ease-out hover:scale-105
+          ${isSpeaking ? 'animate-pulse' : ''}`}
         onClick={() => isOpen ? setIsOpen(false) : handleOpenFullScreen()}
         aria-label="Open PARI assistant"
       >
         <div className="relative">
-          <div className="h-16 w-16 md:h-[72px] md:w-[72px] rounded-full overflow-hidden border-3 border-primary shadow-xl shadow-primary/20">
-            <img src={pariAvatar} alt="PARI" className="w-full h-full object-cover" />
-          </div>
-          {/* Speech bubble */}
+          {/* PARI character - no circle, no background */}
+          <img 
+            src={pariCharacter} 
+            alt="PARI" 
+            className="h-24 w-auto md:h-28 drop-shadow-2xl" 
+            style={{ filter: 'drop-shadow(0 4px 12px rgba(99, 102, 241, 0.3))' }}
+          />
+          
+          {/* Speech bubble on right hand side */}
           {!isOpen && (
-            <div className="absolute -top-10 -left-20 bg-background border rounded-xl px-3 py-1.5 shadow-lg whitespace-nowrap animate-bounce">
-              <p className="text-xs font-semibold text-primary">How can I help you? 💬</p>
-              <div className="absolute bottom-[-6px] right-4 w-3 h-3 bg-background border-r border-b rotate-45" />
+            <div 
+              className="absolute -top-4 -right-2 translate-x-full bg-background border-2 border-primary/30 rounded-2xl px-3 py-2 shadow-xl max-w-[160px] cursor-pointer hover:border-primary/60 transition-colors"
+              onClick={(e) => { e.stopPropagation(); handleBubbleClick(); }}
+            >
+              <p className="text-xs font-semibold text-primary leading-tight">{speechBubbleText}</p>
+              <p className="text-[10px] text-primary/60 font-bold mt-0.5">~ I am PARI</p>
+              {/* Triangle pointer to left */}
+              <div className="absolute left-[-8px] top-4 w-0 h-0 border-t-[6px] border-t-transparent border-r-[8px] border-r-primary/30 border-b-[6px] border-b-transparent" />
+              {isSuperAdmin && (
+                <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-primary rounded-full animate-pulse" title="Click to edit" />
+              )}
             </div>
           )}
-          <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-accent animate-ping" />
-          {!isOpen && (
-            <span className="absolute inset-0 rounded-full bg-primary/20 opacity-40 animate-ping" />
-          )}
+          
+          <Sparkles className="absolute -top-1 left-1/2 -translate-x-1/2 h-4 w-4 text-accent animate-ping" />
         </div>
       </button>
+
+      {/* Edit bubble dialog for super admins */}
+      {isEditingBubble && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40" onClick={() => setIsEditingBubble(false)}>
+          <div className="bg-background rounded-xl p-4 shadow-2xl w-80 space-y-3" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-sm">Edit PARI Speech Bubble</h3>
+            <Input value={editBubbleText} onChange={e => setEditBubbleText(e.target.value)} maxLength={80} />
+            <div className="flex gap-2 justify-end">
+              <Button size="sm" variant="outline" onClick={() => setIsEditingBubble(false)}>Cancel</Button>
+              <Button size="sm" onClick={saveBubbleText}>Save</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Chat Window */}
       {isOpen && (
@@ -191,10 +239,9 @@ export function EnhancedChatbot() {
           <div className="p-3 md:p-4 flex-shrink-0 bg-gradient-to-r from-primary via-primary/90 to-primary/80 text-primary-foreground">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 md:gap-3">
-                <Avatar className="h-11 w-11 md:h-12 md:w-12 border-2 border-primary-foreground/50">
-                  <AvatarImage src={pariAvatar} alt="PARI" />
-                  <AvatarFallback>P</AvatarFallback>
-                </Avatar>
+                <div className="h-11 w-11 md:h-12 md:w-12 flex-shrink-0">
+                  <img src={pariCharacter} alt="PARI" className="h-full w-auto object-contain drop-shadow-lg" />
+                </div>
                 <div>
                   <h2 className="text-base md:text-lg font-bold">PARI ✨</h2>
                   <p className="text-[10px] md:text-xs text-primary-foreground/70">
@@ -238,7 +285,7 @@ export function EnhancedChatbot() {
               {!isLoadingHistory && messages.length === 0 && (
                 <div className="text-center py-8 md:py-12">
                   <div className="inline-block mb-4">
-                    <img src={pariAvatar} alt="PARI" className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-primary/20 shadow-lg mx-auto" />
+                    <img src={pariCharacter} alt="PARI" className="w-32 h-auto md:w-40 mx-auto drop-shadow-xl" />
                   </div>
                   <p className="font-bold text-xl md:text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     How can I help you? 🙏
@@ -254,14 +301,13 @@ export function EnhancedChatbot() {
               {messages.map((msg, idx) => (
                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {msg.role === 'assistant' && (
-                    <Avatar className="h-8 w-8 mr-2 flex-shrink-0">
-                      <AvatarImage src={pariAvatar} alt="PARI" />
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80">P</AvatarFallback>
-                    </Avatar>
+                    <div className="h-8 w-8 mr-2 flex-shrink-0">
+                      <img src={pariCharacter} alt="PARI" className="h-full w-auto object-contain" />
+                    </div>
                   )}
                   <div className={`max-w-[80%] md:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm md:text-base ${
                     msg.role === 'user'
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-sm'
+                      ? 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-br-sm'
                       : 'bg-card shadow-sm border rounded-bl-sm'
                   }`}>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -270,10 +316,9 @@ export function EnhancedChatbot() {
               ))}
               {isLoading && (
                 <div className="flex justify-start items-end gap-2">
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={pariAvatar} alt="PARI" />
-                    <AvatarFallback>P</AvatarFallback>
-                  </Avatar>
+                  <div className="h-8 w-8 flex-shrink-0">
+                    <img src={pariCharacter} alt="PARI" className="h-full w-auto object-contain" />
+                  </div>
                   <div className="bg-card shadow-sm border rounded-2xl rounded-bl-sm px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1">
