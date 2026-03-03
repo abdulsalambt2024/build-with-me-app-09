@@ -1,4 +1,4 @@
-import { useState, memo, useCallback, useMemo } from 'react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -108,8 +108,6 @@ export function CombinedFeed() {
         );
       }
       
-      // Achievements removed from feed
-      
       if (filter === 'all' || filter === 'announcement') {
         queries.push(
           supabase.from('announcements')
@@ -146,7 +144,6 @@ export function CombinedFeed() {
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]));
 
-      // Get user's liked posts
       if (user) {
         const { data: likes } = await supabase
           .from('post_likes')
@@ -162,40 +159,25 @@ export function CombinedFeed() {
         const postsRes = results[resultIndex++];
         postsRes.data?.forEach((p: any) => {
           items.push({
-            id: p.id,
-            type: 'post',
-            title: p.title,
-            content: p.content,
-            created_at: p.created_at,
-            user_id: p.user_id,
+            id: p.id, type: 'post', title: p.title, content: p.content,
+            created_at: p.created_at, user_id: p.user_id,
             user_name: profileMap.get(p.user_id)?.full_name || 'Unknown',
             avatar_url: profileMap.get(p.user_id)?.avatar_url,
-            media_urls: p.media_urls,
-            likes_count: p.likes_count,
-            comments_count: p.comments_count,
-            is_pinned: p.is_pinned,
-            pinned_at: p.pinned_at
+            media_urls: p.media_urls, likes_count: p.likes_count,
+            comments_count: p.comments_count, is_pinned: p.is_pinned, pinned_at: p.pinned_at
           });
         });
       }
-
-      // Achievements removed from feed
 
       if (filter === 'all' || filter === 'announcement') {
         const announcementsRes = results[resultIndex++];
         announcementsRes.data?.forEach((a: any) => {
           items.push({
-            id: a.id,
-            type: 'announcement',
-            title: a.title,
-            content: a.content,
-            created_at: a.created_at,
-            user_id: a.created_by,
+            id: a.id, type: 'announcement', title: a.title, content: a.content,
+            created_at: a.created_at, user_id: a.created_by,
             user_name: profileMap.get(a.created_by)?.full_name || 'Admin',
             avatar_url: profileMap.get(a.created_by)?.avatar_url,
-            priority: a.priority,
-            is_pinned: a.is_pinned,
-            pinned_at: a.pinned_at
+            priority: a.priority, is_pinned: a.is_pinned, pinned_at: a.pinned_at
           });
         });
       }
@@ -204,12 +186,8 @@ export function CombinedFeed() {
         const eventsRes = results[resultIndex++];
         eventsRes.data?.forEach((e: any) => {
           items.push({
-            id: e.id,
-            type: 'event',
-            title: e.title,
-            content: e.description,
-            created_at: e.created_at,
-            user_id: e.created_by,
+            id: e.id, type: 'event', title: e.title, content: e.description,
+            created_at: e.created_at, user_id: e.created_by,
             user_name: profileMap.get(e.created_by)?.full_name || 'Admin',
             avatar_url: profileMap.get(e.created_by)?.avatar_url,
             event_date: e.event_date,
@@ -218,14 +196,25 @@ export function CombinedFeed() {
         });
       }
 
-      // Sort: pinned first, then by date
       return items.sort((a, b) => {
         if (a.is_pinned && !b.is_pinned) return -1;
         if (!a.is_pinned && b.is_pinned) return 1;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
-    }
+    },
+    staleTime: 1000 * 30, // 30s stale for faster feel
   });
+
+  // Live updates via realtime subscriptions
+  useEffect(() => {
+    const channels = [
+      supabase.channel('feed-posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => { refetch(); }),
+      supabase.channel('feed-announcements').on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, () => { refetch(); }),
+      supabase.channel('feed-events').on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => { refetch(); }),
+    ];
+    channels.forEach(c => c.subscribe());
+    return () => { channels.forEach(c => supabase.removeChannel(c)); };
+  }, [refetch]);
 
   // Fetch likes for a post
   const { data: likesUsers } = useQuery({

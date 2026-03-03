@@ -67,13 +67,28 @@ export default function ProfileEdit() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB');
+      return;
+    }
+
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
+      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
+      
+      // Delete old avatar if exists
+      if (formData.avatar_url) {
+        const oldPath = formData.avatar_url.split('/').pop();
+        if (oldPath) {
+          await supabase.storage.from('avatars').remove([oldPath]);
+        }
+      }
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file);
+        .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -81,11 +96,19 @@ export default function ProfileEdit() {
         .from('avatars')
         .getPublicUrl(fileName);
 
+      // Save avatar URL immediately to profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq('user_id', user?.id);
+
+      if (updateError) throw updateError;
+
       setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
-      toast.success('Avatar uploaded successfully');
+      toast.success('Profile picture updated!');
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      toast.error('Failed to upload avatar');
+      toast.error('Failed to upload profile picture');
     } finally {
       setUploading(false);
     }
@@ -98,7 +121,7 @@ export default function ProfileEdit() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update(formData)
+        .update({ ...formData, updated_at: new Date().toISOString() })
         .eq('user_id', user?.id);
 
       if (error) throw error;
