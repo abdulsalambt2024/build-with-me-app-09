@@ -9,6 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Send, Image as ImageIcon, Paperclip, Mic, MicOff, Reply, Pin, Trash2, Check, CheckCheck, MoreVertical, Users, Info, Edit2, Smile, Search, ArrowDown } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -29,7 +31,7 @@ interface Message {
   reply_to_message_id: string | null;
   edited_at: string | null;
   profiles: { full_name: string; avatar_url: string; };
-  reactions: { emoji: string; user_id: string; }[];
+  reactions: { emoji: string; user_id: string; user_name?: string; }[];
   read_status: { user_id: string; read_at: string; }[];
 }
 
@@ -49,10 +51,31 @@ export function UnifiedGroupChat() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [showPinnedMessages, setShowPinnedMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+
+  // Fetch member count
+  const { data: memberCount = 0 } = useQuery({
+    queryKey: ['chat-member-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('chat_participants')
+        .select('*', { count: 'exact', head: true })
+        .eq('room_id', UNIFIED_ROOM_ID);
+      return count || 0;
+    },
+  });
+
+  // Fetch all profiles for reaction names
+  const { data: allProfiles = new Map() } = useQuery({
+    queryKey: ['all-profiles-map'],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('user_id, full_name');
+      return new Map(data?.map(p => [p.user_id, p.full_name || 'Unknown']) || []);
+    },
+    staleTime: 60000,
+  });
 
   // Fetch messages
   const { data: messages = [], isLoading } = useQuery({
@@ -82,13 +105,11 @@ export function UnifiedGroupChat() {
     }
   });
 
-  // Filter messages by search
   const filteredMessages = searchQuery
     ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
         m.profiles.full_name.toLowerCase().includes(searchQuery.toLowerCase()))
     : messages;
 
-  // Pinned messages
   const pinnedMessages = messages.filter(m => m.is_pinned);
 
   // Real-time subscriptions
@@ -123,7 +144,6 @@ export function UnifiedGroupChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Mutations
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
       const validation = chatMessageSchema.safeParse({ content });
@@ -238,10 +258,13 @@ export function UnifiedGroupChat() {
     return grouped;
   };
 
-  // Get reply-to message content
   const getReplyContent = (replyId: string | null) => {
     if (!replyId) return null;
     return messages.find(m => m.id === replyId);
+  };
+
+  const getReactionNames = (userIds: string[]) => {
+    return userIds.map(id => allProfiles.get(id) || 'Unknown').join(', ');
   };
 
   return (
@@ -251,11 +274,13 @@ export function UnifiedGroupChat() {
         <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
           <Users className="h-6 w-6" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0" onClick={() => setShowGroupInfo(true)} role="button">
           <h2 className="font-bold truncate text-lg">PARIVARTAN Family 😇</h2>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
-            <p className="text-xs text-emerald-100">{messages.length} messages • {typingUsers.size > 0 ? 'Someone typing...' : 'Tap for info'}</p>
+            <p className="text-xs text-emerald-100">
+              {memberCount} members • {typingUsers.size > 0 ? 'Someone typing...' : 'Tap for info'}
+            </p>
           </div>
         </div>
         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => setShowSearch(!showSearch)}>
@@ -286,18 +311,22 @@ export function UnifiedGroupChat() {
         </div>
       )}
 
-      {/* Pinned Messages Banner */}
+      {/* Pinned Messages Banner - clickable to view all */}
       {pinnedMessages.length > 0 && !showSearch && (
-        <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/50 border-b flex items-center gap-2 text-sm">
+        <button
+          className="px-3 py-2 bg-amber-50 dark:bg-amber-950/50 border-b flex items-center gap-2 text-sm w-full text-left hover:bg-amber-100 dark:hover:bg-amber-950 transition-colors"
+          onClick={() => setShowPinnedMessages(true)}
+        >
           <Pin className="h-4 w-4 text-amber-500 flex-shrink-0" />
-          <p className="truncate text-amber-700 dark:text-amber-300 font-medium">
+          <p className="truncate text-amber-700 dark:text-amber-300 font-medium flex-1">
             📌 {pinnedMessages[pinnedMessages.length - 1]?.content}
           </p>
-        </div>
+          <span className="text-[10px] text-amber-500 font-medium">{pinnedMessages.length} pinned</span>
+        </button>
       )}
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-2 sm:p-4" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 p-2 sm:p-4">
         {isLoading ? (
           <div className="text-center text-muted-foreground py-8">Loading messages...</div>
         ) : (
@@ -312,7 +341,6 @@ export function UnifiedGroupChat() {
 
               return (
                 <div key={msg.id}>
-                  {/* Date Separator */}
                   {showDateSep && (
                     <div className="flex items-center gap-3 my-3">
                       <div className="flex-1 h-px bg-border" />
@@ -340,7 +368,6 @@ export function UnifiedGroupChat() {
                             ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-tr-sm'
                             : 'bg-card border rounded-tl-sm'
                         } ${msg.is_pinned ? 'ring-2 ring-amber-400/50' : ''}`}>
-                          {/* Sender name */}
                           {!isOwn && (
                             <div className="flex items-center gap-1 mb-0.5">
                               <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -350,7 +377,6 @@ export function UnifiedGroupChat() {
                             </div>
                           )}
 
-                          {/* Reply preview */}
                           {replyMsg && (
                             <div className={`text-xs mb-1.5 px-2 py-1 rounded border-l-2 ${
                               isOwn ? 'bg-white/10 border-white/40' : 'bg-muted/50 border-emerald-400'
@@ -360,7 +386,6 @@ export function UnifiedGroupChat() {
                             </div>
                           )}
 
-                          {/* Media */}
                           {msg.media_url && msg.message_type === 'image' && (
                             <img src={msg.media_url} alt="Shared" className="rounded-lg max-w-full mb-2 cursor-pointer hover:opacity-90"
                               onClick={() => window.open(msg.media_url!, '_blank')} />
@@ -395,17 +420,24 @@ export function UnifiedGroupChat() {
                           </div>
                         </div>
 
-                        {/* Reactions */}
+                        {/* Reactions with tooltip showing who reacted */}
                         {Object.keys(groupedReactions).length > 0 && (
                           <div className={`flex flex-wrap gap-1 mt-0.5 ${isOwn ? 'justify-end' : ''}`}>
                             {Object.entries(groupedReactions).map(([emoji, users]) => (
-                              <button key={emoji}
-                                onClick={() => reactMutation.mutate({ messageId: msg.id, emoji })}
-                                className={`text-xs px-1.5 py-0.5 rounded-full border transition-colors ${
-                                  users.includes(user?.id || '') ? 'bg-emerald-100 border-emerald-300 dark:bg-emerald-900' : 'bg-muted border-transparent'
-                                }`}>
-                                {emoji} {users.length}
-                              </button>
+                              <Tooltip key={emoji}>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => reactMutation.mutate({ messageId: msg.id, emoji })}
+                                    className={`text-xs px-1.5 py-0.5 rounded-full border transition-colors ${
+                                      users.includes(user?.id || '') ? 'bg-emerald-100 border-emerald-300 dark:bg-emerald-900' : 'bg-muted border-transparent'
+                                    }`}>
+                                    {emoji} {users.length}
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs max-w-[200px]">
+                                  {getReactionNames(users)}
+                                </TooltipContent>
+                              </Tooltip>
                             ))}
                           </div>
                         )}
@@ -586,6 +618,47 @@ export function UnifiedGroupChat() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Pinned Messages Dialog */}
+      <Dialog open={showPinnedMessages} onOpenChange={setShowPinnedMessages}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pin className="h-5 w-5 text-amber-500" />
+              Pinned Messages ({pinnedMessages.length})
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[400px]">
+            {pinnedMessages.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">No pinned messages</p>
+            ) : (
+              <div className="space-y-3">
+                {pinnedMessages.map((msg) => (
+                  <div key={msg.id} className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={msg.profiles.avatar_url} />
+                        <AvatarFallback className="text-[10px]">{msg.profiles.full_name?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs font-semibold">{msg.profiles.full_name}</span>
+                      <span className="text-[10px] text-muted-foreground ml-auto">
+                        {format(new Date(msg.created_at), 'MMM d, h:mm a')}
+                      </span>
+                    </div>
+                    <p className="text-sm">{msg.content}</p>
+                    {isAdmin && (
+                      <Button variant="ghost" size="sm" className="text-xs mt-1 h-6 text-amber-600"
+                        onClick={() => { pinMutation.mutate({ messageId: msg.id, isPinned: true }); setShowPinnedMessages(false); }}>
+                        Unpin
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
