@@ -919,6 +919,36 @@ export type Database = {
         }
         Relationships: []
       }
+      pari_comments: {
+        Row: {
+          created_at: string
+          created_by: string
+          display_order: number
+          id: string
+          is_active: boolean
+          message: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          message: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          message?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_transactions: {
         Row: {
           admin_verified_at: string | null

@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { X, Send, Volume2, VolumeX, Sparkles, Maximize2, Minimize2, Mic, MicOff, Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -30,23 +29,40 @@ export function EnhancedChatbot() {
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [speechBubbleText, setSpeechBubbleText] = useState('How can I help you? 💬');
-  const [isEditingBubble, setIsEditingBubble] = useState(false);
-  const [editBubbleText, setEditBubbleText] = useState('');
+  const [currentCommentIndex, setCurrentCommentIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const isSuperAdmin = role === 'super_admin';
 
   const { 
     messages, setMessages, addMessage, saveConversation, 
     clearHistory, exportHistory, isLoadingHistory 
   } = useChatbotHistory(user?.id);
 
-  // Load custom bubble text from localStorage
+  // Fetch rotating comments from DB
+  const { data: pariComments = [] } = useQuery({
+    queryKey: ['pari-comments-active'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pari_comments')
+        .select('message')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      return data?.map(c => c.message) || ['How can I Help You? 💬'];
+    },
+    staleTime: 60000,
+  });
+
+  // Rotate comments every 5 seconds
   useEffect(() => {
-    const saved = localStorage.getItem('pari-speech-bubble');
-    if (saved) setSpeechBubbleText(saved);
-  }, []);
+    if (pariComments.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentCommentIndex(prev => (prev + 1) % pariComments.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [pariComments.length]);
+
+  const currentBubbleText = pariComments[currentCommentIndex] || 'How can I Help You? 💬';
 
   const handleExport = async () => {
     const result = await exportHistory();
@@ -162,27 +178,13 @@ export function EnhancedChatbot() {
     setIsFullScreen(true);
   };
 
-  const handleBubbleClick = () => {
-    if (isSuperAdmin && !isOpen) {
-      setEditBubbleText(speechBubbleText);
-      setIsEditingBubble(true);
-    }
-  };
-
-  const saveBubbleText = () => {
-    setSpeechBubbleText(editBubbleText);
-    localStorage.setItem('pari-speech-bubble', editBubbleText);
-    setIsEditingBubble(false);
-    toast({ title: 'Updated', description: 'PARI speech bubble text updated.' });
-  };
-
   const chatWindowClasses = isFullScreen 
     ? 'fixed inset-0 z-50 flex flex-col bg-background'
     : 'fixed bottom-44 right-4 md:bottom-28 w-[calc(100%-2rem)] max-w-sm h-[450px] flex flex-col z-40 shadow-2xl border rounded-xl overflow-hidden bg-background';
 
   return (
     <>
-      {/* Floating PARI Character - Full body, no background/circle */}
+      {/* Floating PARI Character */}
       <button
         className={`fixed bottom-20 right-2 md:bottom-6 z-40 group transition-all duration-300 ease-out hover:scale-105
           ${isSpeaking ? 'animate-pulse' : ''}`}
@@ -190,7 +192,6 @@ export function EnhancedChatbot() {
         aria-label="Open PARI assistant"
       >
         <div className="relative">
-          {/* PARI character - no circle, no background */}
           <img 
             src={pariCharacter} 
             alt="PARI" 
@@ -198,19 +199,14 @@ export function EnhancedChatbot() {
             style={{ filter: 'drop-shadow(0 4px 12px rgba(99, 102, 241, 0.3))' }}
           />
           
-          {/* Speech bubble on right hand side */}
+          {/* Speech bubble with rotating text */}
           {!isOpen && (
-            <div 
-              className="absolute -top-4 -right-2 translate-x-full bg-background border-2 border-primary/30 rounded-2xl px-3 py-2 shadow-xl max-w-[160px] cursor-pointer hover:border-primary/60 transition-colors"
-              onClick={(e) => { e.stopPropagation(); handleBubbleClick(); }}
-            >
-              <p className="text-xs font-semibold text-primary leading-tight">{speechBubbleText}</p>
+            <div className="absolute -top-4 -right-2 translate-x-full bg-background border-2 border-primary/30 rounded-2xl px-3 py-2 shadow-xl max-w-[160px] transition-all duration-500">
+              <p className="text-xs font-semibold text-primary leading-tight animate-fade-in" key={currentCommentIndex}>
+                {currentBubbleText}
+              </p>
               <p className="text-[10px] text-primary/60 font-bold mt-0.5">~ I am PARI</p>
-              {/* Triangle pointer to left */}
               <div className="absolute left-[-8px] top-4 w-0 h-0 border-t-[6px] border-t-transparent border-r-[8px] border-r-primary/30 border-b-[6px] border-b-transparent" />
-              {isSuperAdmin && (
-                <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-primary rounded-full animate-pulse" title="Click to edit" />
-              )}
             </div>
           )}
           
@@ -218,24 +214,9 @@ export function EnhancedChatbot() {
         </div>
       </button>
 
-      {/* Edit bubble dialog for super admins */}
-      {isEditingBubble && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40" onClick={() => setIsEditingBubble(false)}>
-          <div className="bg-background rounded-xl p-4 shadow-2xl w-80 space-y-3" onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-sm">Edit PARI Speech Bubble</h3>
-            <Input value={editBubbleText} onChange={e => setEditBubbleText(e.target.value)} maxLength={80} />
-            <div className="flex gap-2 justify-end">
-              <Button size="sm" variant="outline" onClick={() => setIsEditingBubble(false)}>Cancel</Button>
-              <Button size="sm" onClick={saveBubbleText}>Save</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Chat Window */}
       {isOpen && (
         <div className={chatWindowClasses}>
-          {/* Header */}
           <div className="p-3 md:p-4 flex-shrink-0 bg-gradient-to-r from-primary via-primary/90 to-primary/80 text-primary-foreground">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 md:gap-3">
@@ -274,7 +255,6 @@ export function EnhancedChatbot() {
             </div>
           </div>
 
-          {/* Messages */}
           <ScrollArea className="flex-1 p-3 md:p-4" ref={scrollRef}>
             <div className="space-y-3 md:space-y-4 max-w-2xl mx-auto">
               {isLoadingHistory && (
@@ -334,7 +314,6 @@ export function EnhancedChatbot() {
             </div>
           </ScrollArea>
 
-          {/* Input */}
           <div className="p-3 md:p-4 border-t flex-shrink-0 bg-background">
             <form id="chatbot-form" onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
               className="flex gap-2 max-w-2xl mx-auto">
@@ -360,7 +339,6 @@ export function EnhancedChatbot() {
         </div>
       )}
 
-      {/* Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -38,6 +38,7 @@ const PopupManager = lazy(() => import("./pages/admin/PopupManager"));
 const ChatbotFAQ = lazy(() => import("./pages/admin/ChatbotFAQ"));
 const DataTracking = lazy(() => import("./pages/admin/DataTracking"));
 const AchievementAwards = lazy(() => import("./pages/admin/AchievementAwards"));
+const PariComments = lazy(() => import("./pages/admin/PariComments"));
 const PerformanceDashboard = lazy(() => import("./pages/PerformanceDashboard"));
 const AppGuide = lazy(() => import("./pages/AppGuide"));
 const AllMembers = lazy(() => import("./pages/AllMembers"));
@@ -114,6 +115,7 @@ const App = () => (
                     <Route path="/admin/chatbot-faq" element={<Layout><ProtectedRoute requiredRole="admin"><ChatbotFAQ /></ProtectedRoute></Layout>} />
                     <Route path="/admin/data-tracking" element={<Layout><ProtectedRoute requiredRole="admin"><DataTracking /></ProtectedRoute></Layout>} />
                     <Route path="/admin/achievement-awards" element={<Layout><ProtectedRoute requiredRole="super_admin"><AchievementAwards /></ProtectedRoute></Layout>} />
+                    <Route path="/admin/pari-comments" element={<Layout><ProtectedRoute requiredRole="super_admin"><PariComments /></ProtectedRoute></Layout>} />
                     <Route path="/performance" element={<Layout><ProtectedRoute><PerformanceDashboard /></ProtectedRoute></Layout>} />
                     <Route path="/guide" element={<Layout><ProtectedRoute><AppGuide /></ProtectedRoute></Layout>} />
                     <Route path="/members" element={<Layout><ProtectedRoute><AllMembers /></ProtectedRoute></Layout>} />

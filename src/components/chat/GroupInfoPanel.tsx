@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
-import { Users, Crown, Shield, User, MessageCircle, Image, FileText, Mic2 } from 'lucide-react';
+import { Users, Crown, Shield, User } from 'lucide-react';
 
 interface GroupMember {
   user_id: string;
@@ -41,22 +41,6 @@ export function GroupInfoPanel({ roomId }: GroupInfoPanelProps) {
           role: roleData?.role || 'viewer'
         };
       }) as GroupMember[];
-    }
-  });
-
-  // Message stats
-  const { data: messageStats } = useQuery({
-    queryKey: ['group-stats', roomId],
-    queryFn: async () => {
-      const { count: totalMessages } = await supabase
-        .from('messages').select('*', { count: 'exact', head: true }).eq('room_id', roomId).eq('is_deleted', false);
-      const { count: imageCount } = await supabase
-        .from('messages').select('*', { count: 'exact', head: true }).eq('room_id', roomId).eq('message_type', 'image');
-      const { count: docCount } = await supabase
-        .from('messages').select('*', { count: 'exact', head: true }).eq('room_id', roomId).eq('message_type', 'document');
-      const { count: voiceCount } = await supabase
-        .from('messages').select('*', { count: 'exact', head: true }).eq('room_id', roomId).eq('message_type', 'voice');
-      return { totalMessages: totalMessages || 0, imageCount: imageCount || 0, docCount: docCount || 0, voiceCount: voiceCount || 0 };
     }
   });
 
@@ -99,7 +83,7 @@ export function GroupInfoPanel({ roomId }: GroupInfoPanelProps) {
         </div>
         <h3 className="font-bold text-xl">PARIVARTAN Family 😇</h3>
         <p className="text-sm text-muted-foreground mt-1">Community Group • Created by Admin</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{stats.total} participants</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{stats.total} members</p>
       </div>
 
       <Separator />
@@ -125,39 +109,10 @@ export function GroupInfoPanel({ roomId }: GroupInfoPanelProps) {
 
       <Separator />
 
-      {/* Media Stats */}
-      <div>
-        <h4 className="font-semibold text-sm mb-3">Shared Media & Files</h4>
-        <div className="grid grid-cols-4 gap-2">
-          <div className="text-center p-2 bg-muted/50 rounded-lg">
-            <MessageCircle className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-            <p className="text-sm font-bold">{messageStats?.totalMessages || 0}</p>
-            <p className="text-[9px] text-muted-foreground">Messages</p>
-          </div>
-          <div className="text-center p-2 bg-muted/50 rounded-lg">
-            <Image className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-            <p className="text-sm font-bold">{messageStats?.imageCount || 0}</p>
-            <p className="text-[9px] text-muted-foreground">Images</p>
-          </div>
-          <div className="text-center p-2 bg-muted/50 rounded-lg">
-            <FileText className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-            <p className="text-sm font-bold">{messageStats?.docCount || 0}</p>
-            <p className="text-[9px] text-muted-foreground">Files</p>
-          </div>
-          <div className="text-center p-2 bg-muted/50 rounded-lg">
-            <Mic2 className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-            <p className="text-sm font-bold">{messageStats?.voiceCount || 0}</p>
-            <p className="text-[9px] text-muted-foreground">Voice</p>
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
       {/* Members List */}
       <div>
-        <h4 className="font-semibold text-sm mb-2">{stats.total} Participants</h4>
-        <ScrollArea className="h-[300px]">
+        <h4 className="font-semibold text-sm mb-2">{stats.total} Members</h4>
+        <ScrollArea className="h-[350px]">
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
           ) : (

@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Camera } from 'lucide-react';
 
 export default function ProfileEdit() {
   const { user } = useAuth();
@@ -30,9 +30,7 @@ export default function ProfileEdit() {
   });
 
   useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
+    if (user) fetchProfile();
   }, [user]);
 
   const fetchProfile = async () => {
@@ -65,9 +63,8 @@ export default function ProfileEdit() {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user?.id) return;
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Image must be under 5MB');
       return;
@@ -75,40 +72,41 @@ export default function ProfileEdit() {
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
-      
-      // Delete old avatar if exists
-      if (formData.avatar_url) {
-        const oldPath = formData.avatar_url.split('/').pop();
-        if (oldPath) {
-          await supabase.storage.from('avatars').remove([oldPath]);
-        }
-      }
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
+      // Upload to avatars bucket with user subfolder
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, file, { 
+          upsert: true,
+          contentType: file.type 
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
 
-      // Save avatar URL immediately to profile
+      // Add cache buster
+      const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
+
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
-        .eq('user_id', user?.id);
+        .update({ avatar_url: urlWithCacheBuster, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id);
 
       if (updateError) throw updateError;
 
-      setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
+      setFormData(prev => ({ ...prev, avatar_url: urlWithCacheBuster }));
       toast.success('Profile picture updated!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      toast.error('Failed to upload profile picture');
+      toast.error(error?.message || 'Failed to upload profile picture');
     } finally {
       setUploading(false);
     }
@@ -116,13 +114,14 @@ export default function ProfileEdit() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id) return;
     setLoading(true);
 
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ ...formData, updated_at: new Date().toISOString() })
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
@@ -145,103 +144,84 @@ export default function ProfileEdit() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={formData.avatar_url} />
-                <AvatarFallback>{formData.full_name?.[0] || 'U'}</AvatarFallback>
-              </Avatar>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                disabled={uploading}
-                className="max-w-xs"
-              />
-              {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+              <div className="relative group">
+                <Avatar className="h-24 w-24 ring-4 ring-primary/20">
+                  <AvatarImage src={formData.avatar_url} />
+                  <AvatarFallback className="text-2xl bg-primary/10 text-primary">{formData.full_name?.[0] || 'U'}</AvatarFallback>
+                </Avatar>
+                <label
+                  htmlFor="avatar-upload"
+                  className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  {uploading ? (
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-white" />
+                  )}
+                </label>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Tap to change photo (JPG, PNG, max 5MB)</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="full_name">Full Name *</Label>
-                <Input
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  required
-                />
+                <Input id="full_name" value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} required />
               </div>
               <div>
                 <Label htmlFor="father_name">Father's Name</Label>
-                <Input
-                  id="father_name"
-                  value={formData.father_name}
-                  onChange={(e) => setFormData({ ...formData, father_name: e.target.value })}
-                />
+                <Input id="father_name" value={formData.father_name}
+                  onChange={(e) => setFormData({ ...formData, father_name: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="course">Course</Label>
-                <Input
-                  id="course"
-                  value={formData.course}
-                  onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                />
+                <Input id="course" value={formData.course}
+                  onChange={(e) => setFormData({ ...formData, course: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="branch">Branch</Label>
-                <Input
-                  id="branch"
-                  value={formData.branch}
-                  onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                />
+                <Input id="branch" value={formData.branch}
+                  onChange={(e) => setFormData({ ...formData, branch: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="roll_number">Roll Number</Label>
-                <Input
-                  id="roll_number"
-                  value={formData.roll_number}
-                  onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })}
-                />
+                <Input id="roll_number" value={formData.roll_number}
+                  onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="year">Year</Label>
-                <Input
-                  id="year"
-                  value={formData.year}
-                  onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                />
+                <Input id="year" value={formData.year}
+                  onChange={(e) => setFormData({ ...formData, year: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="semester">Semester</Label>
-                <Input
-                  id="semester"
-                  value={formData.semester}
-                  onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                />
+                <Input id="semester" value={formData.semester}
+                  onChange={(e) => setFormData({ ...formData, semester: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="date_of_birth">Date of Birth</Label>
-                <Input
-                  id="date_of_birth"
-                  type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                />
+                <Input id="date_of_birth" type="date" value={formData.date_of_birth}
+                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} />
               </div>
             </div>
 
             <div>
               <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                rows={4}
-              />
+              <Textarea id="bio" value={formData.bio}
+                onChange={(e) => setFormData({ ...formData, bio: e.target.value })} rows={4} />
             </div>
 
             <div className="flex gap-4">
-              <Button type="button" variant="outline" onClick={() => navigate('/profile')}>
-                Cancel
-              </Button>
+              <Button type="button" variant="outline" onClick={() => navigate('/profile')}>Cancel</Button>
               <Button type="submit" disabled={loading} className="flex-1">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Changes
