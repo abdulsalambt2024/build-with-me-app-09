@@ -199,14 +199,14 @@ export function EnhancedChatbot() {
             style={{ filter: 'drop-shadow(0 4px 12px rgba(99, 102, 241, 0.3))' }}
           />
           
-          {/* Speech bubble with rotating text */}
+          {/* Speech bubble near PARI's hand */}
           {!isOpen && (
-            <div className="absolute -top-4 -right-2 translate-x-full bg-background border-2 border-primary/30 rounded-2xl px-3 py-2 shadow-xl max-w-[160px] transition-all duration-500">
+            <div className="absolute top-1 -left-4 -translate-x-full bg-background border-2 border-primary/30 rounded-2xl px-3 py-2 shadow-xl max-w-[150px] transition-all duration-500">
               <p className="text-xs font-semibold text-primary leading-tight animate-fade-in" key={currentCommentIndex}>
                 {currentBubbleText}
               </p>
               <p className="text-[10px] text-primary/60 font-bold mt-0.5">~ I am PARI</p>
-              <div className="absolute left-[-8px] top-4 w-0 h-0 border-t-[6px] border-t-transparent border-r-[8px] border-r-primary/30 border-b-[6px] border-b-transparent" />
+              <div className="absolute right-[-8px] top-4 w-0 h-0 border-t-[6px] border-t-transparent border-l-[8px] border-l-primary/30 border-b-[6px] border-b-transparent" />
             </div>
           )}
           
