@@ -7,12 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, Users, BookOpen, Calendar, MoreVertical, Trash2, KeyRound, UserCog, UserPlus, Loader2 } from 'lucide-react';
+import { Search, Users, BookOpen, Calendar, MoreVertical, Trash2, KeyRound, UserCog, UserPen, Loader2 } from 'lucide-react';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -29,6 +28,8 @@ interface MemberProfile {
   semester: string | null;
   year: string | null;
   roll_number: string | null;
+  father_name: string | null;
+  date_of_birth: string | null;
   created_at: string;
   role?: string;
 }
@@ -41,8 +42,13 @@ export default function AllMembers() {
   const [selectedMember, setSelectedMember] = useState<MemberProfile | null>(null);
   const [deletingUser, setDeletingUser] = useState<MemberProfile | null>(null);
   const [editingUser, setEditingUser] = useState<MemberProfile | null>(null);
+  const [editDetailsUser, setEditDetailsUser] = useState<MemberProfile | null>(null);
   const [resetUser, setResetUser] = useState<MemberProfile | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [editForm, setEditForm] = useState({
+    full_name: '', bio: '', course: '', branch: '', roll_number: '',
+    year: '', semester: '', father_name: '', date_of_birth: '',
+  });
 
   const isSuperAdmin = currentRole === 'super_admin';
 
@@ -51,7 +57,7 @@ export default function AllMembers() {
     queryFn: async () => {
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name, avatar_url, bio, branch, course, semester, year, roll_number, created_at')
+        .select('user_id, full_name, avatar_url, bio, branch, course, semester, year, roll_number, father_name, date_of_birth, created_at')
         .eq('is_disabled', false)
         .order('full_name');
       const { data: roles } = await supabase.from('user_roles').select('user_id, role');
@@ -85,6 +91,42 @@ export default function AllMembers() {
     },
     onError: (e: any) => toast.error(e.message || 'Failed to reset password'),
   });
+
+  const editDetailsMutation = useMutation({
+    mutationFn: async ({ userId, details }: { userId: string; details: typeof editForm }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: details.full_name || null,
+          bio: details.bio || null,
+          course: details.course || null,
+          branch: details.branch || null,
+          roll_number: details.roll_number || null,
+          year: details.year || null,
+          semester: details.semester || null,
+          father_name: details.father_name || null,
+          date_of_birth: details.date_of_birth || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-members'] });
+      toast.success('Profile updated successfully');
+      setEditDetailsUser(null);
+    },
+    onError: (error: any) => toast.error(error.message || 'Failed to update profile'),
+  });
+
+  const openEditDetails = (member: MemberProfile) => {
+    setEditForm({
+      full_name: member.full_name || '', bio: member.bio || '', course: member.course || '',
+      branch: member.branch || '', roll_number: member.roll_number || '', year: member.year || '',
+      semester: member.semester || '', father_name: member.father_name || '', date_of_birth: member.date_of_birth || '',
+    });
+    setEditDetailsUser(member);
+  };
 
   const filtered = members?.filter(m => {
     const matchesSearch = !search ||
@@ -175,6 +217,9 @@ export default function AllMembers() {
                           <Button variant="ghost" size="icon" className="shrink-0"><MoreVertical className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditDetails(member)}>
+                            <UserPen className="h-4 w-4 mr-2" /> Edit Details
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setEditingUser(member)}>
                             <UserCog className="h-4 w-4 mr-2" /> Edit Role
                           </DropdownMenuItem>
@@ -241,6 +286,46 @@ export default function AllMembers() {
             onOpenChange={(open) => { if (!open) setEditingUser(null); }}
           />
         )}
+
+        {/* Edit Details Dialog */}
+        <Dialog open={!!editDetailsUser} onOpenChange={(open) => { if (!open) setEditDetailsUser(null); }}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><UserPen className="h-5 w-5" /> Edit Profile Details</DialogTitle>
+              <DialogDescription>Edit profile for <strong>{editDetailsUser?.full_name}</strong></DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              {[
+                { key: 'full_name', label: 'Full Name' },
+                { key: 'bio', label: 'Bio' },
+                { key: 'father_name', label: "Father's Name" },
+                { key: 'course', label: 'Course' },
+                { key: 'branch', label: 'Branch' },
+                { key: 'roll_number', label: 'Roll Number' },
+                { key: 'year', label: 'Year' },
+                { key: 'semester', label: 'Semester' },
+                { key: 'date_of_birth', label: 'Date of Birth', type: 'date' },
+              ].map(field => (
+                <div key={field.key} className="space-y-1">
+                  <Label className="text-sm">{field.label}</Label>
+                  <Input
+                    type={field.type || 'text'}
+                    value={editForm[field.key as keyof typeof editForm]}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, [field.key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => setEditDetailsUser(null)}>Cancel</Button>
+                <Button onClick={() => editDetailsUser && editDetailsMutation.mutate({ userId: editDetailsUser.user_id, details: editForm })}
+                  disabled={editDetailsMutation.isPending}>
+                  {editDetailsMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Delete Dialog */}
         <AlertDialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>

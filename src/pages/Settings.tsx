@@ -2,11 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useColorScheme, ColorScheme } from '@/contexts/ColorSchemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { Moon, Sun, Monitor, Bell, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi, BellRing, Save } from 'lucide-react';
+import { Moon, Sun, Monitor, Bell, Palette, Check, Sparkles, Shield, Eye, Mail, Activity, Wifi, BellRing, Save, KeyRound, Loader2 } from 'lucide-react';
 import { TwoFactorAuth } from '@/components/settings/TwoFactorAuth';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -63,10 +64,11 @@ export default function Settings() {
 
   const [settings, setSettings] = useState(defaultSettings);
   const [isDirty, setIsDirty] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const canUse2FA = role !== 'viewer';
 
-  // Load settings from DB
   const { data: savedSettings } = useQuery({
     queryKey: ['user-settings', user?.id],
     queryFn: async () => {
@@ -121,6 +123,51 @@ export default function Settings() {
   const handlePushToggle = async () => {
     if (isSubscribed) await unsubscribe();
     else await subscribe();
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (!passwordForm.oldPassword) {
+      toast.error('Please enter your current password');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      // Verify old password by re-signing in
+      const email = user?.email;
+      if (!email) throw new Error('No email found');
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: passwordForm.oldPassword,
+      });
+      if (signInError) {
+        toast.error('Current password is incorrect');
+        setChangingPassword(false);
+        return;
+      }
+
+      // Update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword,
+      });
+      if (updateError) throw updateError;
+
+      toast.success('Password changed successfully!');
+      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -206,6 +253,42 @@ export default function Settings() {
 
         {/* 2FA */}
         {canUse2FA && <TwoFactorAuth />}
+
+        {/* Change Password */}
+        <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+          <CardHeader className="pb-4 bg-gradient-to-r from-amber-500/5 to-transparent">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/10"><KeyRound className="h-5 w-5 text-amber-600" /></div>
+              <div><CardTitle className="text-lg">Change Password</CardTitle><CardDescription className="text-xs">Update your account password</CardDescription></div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Current Password</Label>
+              <Input type="password" placeholder="Enter current password" value={passwordForm.oldPassword}
+                onChange={(e) => setPasswordForm(prev => ({ ...prev, oldPassword: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">New Password</Label>
+              <Input type="password" placeholder="Enter new password (min 6 chars)" value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Confirm New Password</Label>
+              <Input type="password" placeholder="Confirm new password" value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))} />
+            </div>
+            {passwordForm.newPassword && passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
+              <p className="text-xs text-destructive">Passwords do not match</p>
+            )}
+            <Button onClick={handleChangePassword}
+              disabled={changingPassword || !passwordForm.oldPassword || passwordForm.newPassword.length < 6 || passwordForm.newPassword !== passwordForm.confirmPassword}
+              className="w-full">
+              {changingPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Change Password
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* In-App Notifications */}
         <Card className="overflow-hidden border-0 shadow-lg bg-card/80 backdrop-blur-sm">
