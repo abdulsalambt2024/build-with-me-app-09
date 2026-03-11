@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Trash2, Eye, UserCog, Ban, CheckCircle, MoreVertical, KeyRound } from 'lucide-react';
+import { Trash2, Eye, UserCog, Ban, CheckCircle, MoreVertical, KeyRound, UserPen } from 'lucide-react';
 
 export interface UserWithRole {
   id: string;
@@ -32,6 +32,7 @@ interface UserCardProps {
   onDelete: (user: UserWithRole) => void;
   onToggleDisable: (user: UserWithRole) => void;
   onResetPassword?: (user: UserWithRole) => void;
+  onEditDetails?: (user: UserWithRole) => void;
 }
 
 const getRoleBadgeVariant = (role: string) => {
@@ -53,7 +54,7 @@ const getRoleLabel = (role: string) => {
 };
 
 export const UserCard = memo(({ 
-  user, isSuperAdmin, onView, onEdit, onDelete, onToggleDisable, onResetPassword
+  user, isSuperAdmin, onView, onEdit, onDelete, onToggleDisable, onResetPassword, onEditDetails
 }: UserCardProps) => {
   return (
     <Card className={user.is_disabled ? 'opacity-60 border-destructive/30' : ''}>
@@ -87,6 +88,11 @@ export const UserCard = memo(({
             <DropdownMenuItem onClick={() => onView(user)}>
               <Eye className="h-4 w-4 mr-2" /> View Details
             </DropdownMenuItem>
+            {isSuperAdmin && onEditDetails && (
+              <DropdownMenuItem onClick={() => onEditDetails(user)}>
+                <UserPen className="h-4 w-4 mr-2" /> Edit Details
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => onEdit(user)}>
               <UserCog className="h-4 w-4 mr-2" /> Edit Role
             </DropdownMenuItem>
