@@ -195,7 +195,7 @@ export function EnhancedChatbot() {
           <img 
             src={pariCharacter} 
             alt="PARI" 
-            className="h-24 w-auto md:h-28 drop-shadow-2xl" 
+            className="h-28 w-auto md:h-32 drop-shadow-2xl" 
             style={{ filter: 'drop-shadow(0 4px 12px rgba(99, 102, 241, 0.3))' }}
           />
           
