@@ -17,23 +17,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, KeyRound, Loader2 } from 'lucide-react';
+import { Shield, KeyRound, Loader2, UserPen } from 'lucide-react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -51,20 +41,17 @@ export default function UserManagement() {
   const [deletingUser, setDeletingUser] = useState<UserWithRole | null>(null);
   const [disablingUser, setDisablingUser] = useState<UserWithRole | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<UserWithRole | null>(null);
+  const [editDetailsUser, setEditDetailsUser] = useState<UserWithRole | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [editForm, setEditForm] = useState({
+    full_name: '', bio: '', course: '', branch: '', roll_number: '',
+    year: '', semester: '', father_name: '', date_of_birth: '',
+  });
 
   const isSuperAdmin = currentUserRole === 'super_admin';
 
-  // Only super admins can access this page
-  if (!isSuperAdmin) {
-    return <Navigate to="/admin" replace />;
-  }
-
-  const { data, isLoading } = useUsersPaginated({
-    search: searchQuery,
-    roleFilter,
-    page,
-  });
+  // All hooks must be called before any conditional returns
+  const { data, isLoading } = useUsersPaginated({ search: searchQuery, roleFilter, page });
 
   const updateParams = useCallback((updates: Record<string, string | null>) => {
     const newParams = new URLSearchParams(searchParams);
@@ -85,7 +72,6 @@ export default function UserManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users-paginated'] });
-      queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
       toast.success('User deleted permanently');
       setDeletingUser(null);
     },
@@ -95,16 +81,12 @@ export default function UserManagement() {
   const toggleDisableMutation = useMutation({
     mutationFn: async ({ userId, disable, reason }: { userId: string; disable: boolean; reason: string }) => {
       const { error } = await supabase.rpc('toggle_user_disabled', {
-        p_actor_id: currentUser?.id,
-        p_target_id: userId,
-        p_disable: disable,
-        p_reason: reason || null,
+        p_actor_id: currentUser?.id, p_target_id: userId, p_disable: disable, p_reason: reason || null,
       });
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users-paginated'] });
-      queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
       toast.success(variables.disable ? 'User account disabled' : 'User account enabled');
       setDisablingUser(null);
     },
@@ -113,9 +95,7 @@ export default function UserManagement() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
-      const { error } = await supabase.functions.invoke('reset-user-password', {
-        body: { userId, newPassword },
-      });
+      const { error } = await supabase.functions.invoke('reset-user-password', { body: { userId, newPassword } });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -125,6 +105,47 @@ export default function UserManagement() {
     },
     onError: (error: any) => toast.error(error.message || 'Failed to reset password'),
   });
+
+  const editDetailsMutation = useMutation({
+    mutationFn: async ({ userId, details }: { userId: string; details: typeof editForm }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: details.full_name || null,
+          bio: details.bio || null,
+          course: details.course || null,
+          branch: details.branch || null,
+          roll_number: details.roll_number || null,
+          year: details.year || null,
+          semester: details.semester || null,
+          father_name: details.father_name || null,
+          date_of_birth: details.date_of_birth || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users-paginated'] });
+      toast.success('Profile updated successfully');
+      setEditDetailsUser(null);
+    },
+    onError: (error: any) => toast.error(error.message || 'Failed to update profile'),
+  });
+
+  // Conditional return AFTER all hooks
+  if (!isSuperAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  const openEditDetails = (user: UserWithRole) => {
+    setEditForm({
+      full_name: user.full_name || '', bio: user.bio || '', course: user.course || '',
+      branch: user.branch || '', roll_number: user.roll_number || '', year: user.year || '',
+      semester: user.semester || '', father_name: user.father_name || '', date_of_birth: user.date_of_birth || '',
+    });
+    setEditDetailsUser(user);
+  };
 
   return (
     <div className="container max-w-7xl mx-auto p-4">
@@ -158,7 +179,6 @@ export default function UserManagement() {
             roleFilter={roleFilter}
             onRoleFilterChange={(value) => updateParams({ role: value, page: '1' })}
           />
-
           <UserList
             users={data?.users}
             isLoading={isLoading}
@@ -168,6 +188,7 @@ export default function UserManagement() {
             onDelete={setDeletingUser}
             onToggleDisable={setDisablingUser}
             onResetPassword={setResetPasswordUser}
+            onEditDetails={openEditDetails}
             page={page}
             totalPages={data?.totalPages || 1}
             onPageChange={(newPage) => updateParams({ page: String(newPage) })}
@@ -180,93 +201,95 @@ export default function UserManagement() {
         </TabsContent>
       </Tabs>
 
-      {/* Edit Role Dialog */}
       {editingUser && (
-        <EditRoleDialog
-          user={editingUser}
-          open={!!editingUser}
-          onOpenChange={(open) => !open && setEditingUser(null)}
-        />
+        <EditRoleDialog user={editingUser} open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)} />
       )}
 
-      {/* View Details Dialog */}
-      <UserDetailsDialog
-        user={viewingUser}
-        open={!!viewingUser}
-        onOpenChange={(open) => !open && setViewingUser(null)}
-      />
+      <UserDetailsDialog user={viewingUser} open={!!viewingUser} onOpenChange={(open) => !open && setViewingUser(null)} />
 
-      {/* Disable Dialog */}
       <DisableUserDialog
-        user={disablingUser}
-        open={!!disablingUser}
-        onOpenChange={(open) => !open && setDisablingUser(null)}
+        user={disablingUser} open={!!disablingUser} onOpenChange={(open) => !open && setDisablingUser(null)}
         onConfirm={(reason) => {
-          if (disablingUser) {
-            toggleDisableMutation.mutate({
-              userId: disablingUser.user_id,
-              disable: !disablingUser.is_disabled,
-              reason,
-            });
-          }
+          if (disablingUser) toggleDisableMutation.mutate({ userId: disablingUser.user_id, disable: !disablingUser.is_disabled, reason });
         }}
         isPending={toggleDisableMutation.isPending}
       />
 
-      {/* Delete Dialog */}
       <AlertDialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Permanently Delete User</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <strong>{deletingUser?.full_name}</strong> and all their data.
-              This action cannot be undone.
+              This will permanently delete <strong>{deletingUser?.full_name}</strong> and all their data. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deletingUser && deleteUserMutation.mutate(deletingUser.user_id)}
-            >
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deletingUser && deleteUserMutation.mutate(deletingUser.user_id)}>
               Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reset Password Dialog */}
       <Dialog open={!!resetPasswordUser} onOpenChange={(open) => { if (!open) { setResetPasswordUser(null); setNewPassword(''); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5" />
-              Reset Password
-            </DialogTitle>
-            <DialogDescription>
-              Set a new password for <strong>{resetPasswordUser?.full_name}</strong>
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5" /> Reset Password</DialogTitle>
+            <DialogDescription>Set a new password for <strong>{resetPasswordUser?.full_name}</strong></DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>New Password</Label>
-              <Input
-                type="password"
-                placeholder="Enter new password (min 6 characters)"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
+              <Input type="password" placeholder="Min 6 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             </div>
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => { setResetPasswordUser(null); setNewPassword(''); }}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => resetPasswordUser && resetPasswordMutation.mutate({ userId: resetPasswordUser.user_id, newPassword })}
-                disabled={newPassword.length < 6 || resetPasswordMutation.isPending}
-              >
+              <Button variant="outline" onClick={() => { setResetPasswordUser(null); setNewPassword(''); }}>Cancel</Button>
+              <Button onClick={() => resetPasswordUser && resetPasswordMutation.mutate({ userId: resetPasswordUser.user_id, newPassword })}
+                disabled={newPassword.length < 6 || resetPasswordMutation.isPending}>
                 {resetPasswordMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Reset Password
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Details Dialog */}
+      <Dialog open={!!editDetailsUser} onOpenChange={(open) => { if (!open) setEditDetailsUser(null); }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><UserPen className="h-5 w-5" /> Edit Profile Details</DialogTitle>
+            <DialogDescription>Edit profile for <strong>{editDetailsUser?.full_name}</strong></DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {[
+              { key: 'full_name', label: 'Full Name' },
+              { key: 'bio', label: 'Bio' },
+              { key: 'father_name', label: "Father's Name" },
+              { key: 'course', label: 'Course' },
+              { key: 'branch', label: 'Branch' },
+              { key: 'roll_number', label: 'Roll Number' },
+              { key: 'year', label: 'Year' },
+              { key: 'semester', label: 'Semester' },
+              { key: 'date_of_birth', label: 'Date of Birth', type: 'date' },
+            ].map(field => (
+              <div key={field.key} className="space-y-1">
+                <Label className="text-sm">{field.label}</Label>
+                <Input
+                  type={field.type || 'text'}
+                  value={editForm[field.key as keyof typeof editForm]}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, [field.key]: e.target.value }))}
+                />
+              </div>
+            ))}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setEditDetailsUser(null)}>Cancel</Button>
+              <Button onClick={() => editDetailsUser && editDetailsMutation.mutate({ userId: editDetailsUser.user_id, details: editForm })}
+                disabled={editDetailsMutation.isPending}>
+                {editDetailsMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Changes
               </Button>
             </div>
           </div>

@@ -13,6 +13,7 @@ interface UserListProps {
   onDelete: (user: UserWithRole) => void;
   onToggleDisable: (user: UserWithRole) => void;
   onResetPassword?: (user: UserWithRole) => void;
+  onEditDetails?: (user: UserWithRole) => void;
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -40,36 +41,20 @@ function UserCardSkeleton() {
 }
 
 export function UserList({
-  users,
-  isLoading,
-  isSuperAdmin,
-  onView,
-  onEdit,
-  onDelete,
-  onToggleDisable,
-  onResetPassword,
-  page,
-  totalPages,
-  onPageChange,
-  totalCount,
+  users, isLoading, isSuperAdmin, onView, onEdit, onDelete, onToggleDisable,
+  onResetPassword, onEditDetails, page, totalPages, onPageChange, totalCount,
 }: UserListProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4">
-        {[...Array(5)].map((_, i) => (
-          <UserCardSkeleton key={i} />
-        ))}
+        {[...Array(5)].map((_, i) => <UserCardSkeleton key={i} />)}
       </div>
     );
   }
 
   if (!users || users.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <p className="text-muted-foreground">No users found</p>
-        </CardContent>
-      </Card>
+      <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground">No users found</p></CardContent></Card>
     );
   }
 
@@ -77,16 +62,10 @@ export function UserList({
     <div className="space-y-4">
       <div className="grid gap-4">
         {users.map((user) => (
-          <UserCard
-            key={user.id}
-            user={user}
-            isSuperAdmin={isSuperAdmin}
-            onView={onView}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onToggleDisable={onToggleDisable}
-            onResetPassword={onResetPassword}
-          />
+          <UserCard key={user.id} user={user} isSuperAdmin={isSuperAdmin}
+            onView={onView} onEdit={onEdit} onDelete={onDelete}
+            onToggleDisable={onToggleDisable} onResetPassword={onResetPassword}
+            onEditDetails={onEditDetails} />
         ))}
       </div>
 
