@@ -74,9 +74,19 @@ export function EnhancedChatbot() {
   };
 
   const handleClearHistory = async () => {
-    await clearHistory();
+    const wasDeleted = await clearHistory();
     setShowDeleteConfirm(false);
-    toast({ title: 'History cleared', description: 'All previous conversations have been permanently deleted.' });
+
+    if (wasDeleted) {
+      toast({ title: 'History cleared', description: 'All previous conversations have been permanently deleted.' });
+      return;
+    }
+
+    toast({
+      title: 'Delete failed',
+      description: 'Could not permanently delete PARI conversation history.',
+      variant: 'destructive',
+    });
   };
 
   const handleVoiceResult = useCallback((transcript: string) => {
