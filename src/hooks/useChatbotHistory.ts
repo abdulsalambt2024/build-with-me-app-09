@@ -70,16 +70,21 @@ export function useChatbotHistory(userId: string | undefined) {
   }, [userId]);
 
   const clearHistory = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) return false;
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('chatbot_conversations')
         .delete()
         .eq('user_id', userId);
+
+      if (error) throw error;
+
       setMessages([]);
+      return true;
     } catch (error) {
       console.error('Failed to clear history:', error);
+      return false;
     }
   }, [userId]);
 
