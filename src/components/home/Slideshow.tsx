@@ -16,7 +16,6 @@ export function Slideshow() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchSlides();
@@ -50,15 +49,9 @@ export function Slideshow() {
 
   const handleTouchEnd = useCallback(() => {
     const diff = touchStartX.current - touchEndX.current;
-    const threshold = 50;
-    if (Math.abs(diff) > threshold) {
-      if (diff > 0) {
-        // Swipe left - next
-        setCurrentIndex(prev => (prev + 1) % slides.length);
-      } else {
-        // Swipe right - previous
-        setCurrentIndex(prev => (prev - 1 + slides.length) % slides.length);
-      }
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) setCurrentIndex(prev => (prev + 1) % slides.length);
+      else setCurrentIndex(prev => (prev - 1 + slides.length) % slides.length);
     }
   }, [slides.length]);
 
@@ -73,42 +66,41 @@ export function Slideshow() {
   if (slides.length === 0) return null;
 
   return (
-    <Card className="relative overflow-hidden rounded-xl">
-      <div 
-        ref={containerRef}
-        className="relative aspect-video w-full select-none"
+    <Card className="relative overflow-hidden rounded-2xl border-0 shadow-medium group">
+      <div
+        className="relative aspect-[16/8] w-full select-none"
         onClick={handleSlideClick}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ cursor: slides[currentIndex]?.link_url ? 'pointer' : 'default' }}
       >
-        <img 
-          src={slides[currentIndex].image_url} 
-          alt={slides[currentIndex].title} 
-          className="w-full h-full object-cover transition-opacity duration-500" 
+        <img
+          src={slides[currentIndex].image_url}
+          alt={slides[currentIndex].title}
+          className="w-full h-full object-cover transition-all duration-700"
         />
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 md:p-6">
-          <h3 className="text-white font-bold text-center text-base md:text-lg">
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/10 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+          <h3 className="text-primary-foreground font-heading font-bold text-center text-sm md:text-base">
             {slides[currentIndex].title}
           </h3>
           {slides[currentIndex].description && (
-            <p className="text-white/90 text-center text-xs mt-1">
+            <p className="text-primary-foreground/80 text-center text-[11px] mt-0.5">
               {slides[currentIndex].description}
             </p>
           )}
         </div>
 
-        {/* Dot indicators only - no buttons */}
         {slides.length > 1 && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
             {slides.map((_, index) => (
-              <button 
-                key={index} 
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  index === currentIndex ? 'bg-white w-5' : 'bg-white/40 w-1.5'
-                }`} 
-                onClick={(e) => { e.stopPropagation(); setCurrentIndex(index); }} 
+              <button
+                key={index}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? 'bg-primary-foreground w-5' : 'bg-primary-foreground/30 w-1.5'
+                }`}
+                onClick={(e) => { e.stopPropagation(); setCurrentIndex(index); }}
               />
             ))}
           </div>
