@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Slideshow } from '@/components/home/Slideshow';
 import { CombinedFeed } from '@/components/feed/CombinedFeed';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, MessageCircle, Calendar, Lightbulb, UserCheck, Grid, TrendingUp, ArrowRight } from 'lucide-react';
+import { Users, MessageCircle, Calendar, Lightbulb, Grid, TrendingUp, ArrowRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { CreatePostDialog } from '@/components/posts/CreatePostDialog';
@@ -13,32 +13,27 @@ import { PopupDisplay } from '@/components/popup/PopupDisplay';
 import { memo, useCallback, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
-import { Trophy } from 'lucide-react';
 
-// Memoized stat card for better performance
-const StatCard = memo(({ icon: Icon, value, label, gradient, iconColor }: {
+const StatCard = memo(({ icon: Icon, value, label, color }: {
   icon: React.ElementType;
   value: number | string;
   label: string;
-  gradient: string;
-  iconColor: string;
+  color: string;
 }) => (
-  <Card className={`overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] ${gradient}`}>
+  <Card className="border-0 shadow-soft hover-lift group cursor-default overflow-hidden">
     <CardContent className="p-4 flex items-center gap-3">
-      <div className={`p-2.5 rounded-xl ${iconColor} shadow-sm`}>
-        <Icon className="h-5 w-5 text-white" />
+      <div className={`p-2.5 rounded-xl ${color} transition-transform duration-300 group-hover:scale-110`}>
+        <Icon className="h-4 w-4 text-primary-foreground" />
       </div>
       <div>
-        <p className="text-2xl font-bold tracking-tight">{value}</p>
-        <p className="text-xs text-muted-foreground font-medium">{label}</p>
+        <p className="text-xl font-heading font-bold tracking-tight">{value}</p>
+        <p className="text-[11px] text-muted-foreground font-medium">{label}</p>
       </div>
     </CardContent>
   </Card>
 ));
-
 StatCard.displayName = 'StatCard';
 
-// Loading skeleton for stats
 const StatsSkeleton = () => (
   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
     {[...Array(4)].map((_, i) => (
@@ -46,8 +41,8 @@ const StatsSkeleton = () => (
         <CardContent className="p-4 flex items-center gap-3">
           <Skeleton className="h-10 w-10 rounded-xl" />
           <div className="space-y-2">
-            <Skeleton className="h-6 w-12" />
-            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-5 w-10" />
+            <Skeleton className="h-3 w-16" />
           </div>
         </CardContent>
       </Card>
@@ -62,7 +57,6 @@ export default function Home() {
   const canCreate = role !== 'viewer';
   const isAdmin = role === 'admin' || role === 'super_admin';
 
-  // Optimized stats query with proper caching
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['home-stats'],
     queryFn: async () => {
@@ -72,18 +66,11 @@ export default function Home() {
         supabase.from('posts').select('id', { count: 'exact', head: true }),
         supabase.from('attendance').select('status', { count: 'exact', head: true }).eq('status', 'present')
       ]);
-      
       const totalAttendance = attendanceRes.count || 0;
       const attendanceRate = totalAttendance > 0 ? Math.min(Math.round((totalAttendance / Math.max(membersRes.count || 1, 1)) * 10), 100) : 85;
-      
-      return {
-        members: membersRes.count || 0,
-        upcomingEvents: eventsRes.count || 0,
-        posts: postsRes.count || 0,
-        attendanceRate
-      };
+      return { members: membersRes.count || 0, upcomingEvents: eventsRes.count || 0, posts: postsRes.count || 0, attendanceRate };
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: profile } = useQuery({
@@ -94,7 +81,7 @@ export default function Home() {
       return data;
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 10, // 10 minutes cache
+    staleTime: 1000 * 60 * 10,
   });
 
   const firstName = useMemo(() => profile?.full_name?.split(' ')[0] || 'User', [profile?.full_name]);
@@ -108,30 +95,30 @@ export default function Home() {
   }, [queryClient, user?.id]);
 
   const statsData = useMemo(() => [
-    { icon: Users, value: stats?.members || 0, label: 'Members', gradient: 'bg-gradient-to-br from-primary/15 via-primary/5 to-transparent', iconColor: 'bg-primary' },
-    { icon: Grid, value: stats?.posts || 0, label: 'Posts', gradient: 'bg-gradient-to-br from-secondary/15 via-secondary/5 to-transparent', iconColor: 'bg-secondary' },
-    { icon: Calendar, value: stats?.upcomingEvents || 0, label: 'Events', gradient: 'bg-gradient-to-br from-accent/15 via-accent/5 to-transparent', iconColor: 'bg-accent' },
-    { icon: TrendingUp, value: `${stats?.attendanceRate || 85}%`, label: 'Activity', gradient: 'bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent', iconColor: 'bg-emerald-500' },
+    { icon: Users, value: stats?.members || 0, label: 'Members', color: 'bg-primary' },
+    { icon: Grid, value: stats?.posts || 0, label: 'Posts', color: 'bg-secondary' },
+    { icon: Calendar, value: stats?.upcomingEvents || 0, label: 'Events', color: 'bg-accent' },
+    { icon: TrendingUp, value: `${stats?.attendanceRate || 85}%`, label: 'Activity', color: 'bg-secondary' },
   ], [stats]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+    <div className="min-h-screen">
       <PullToRefresh onRefresh={handleRefresh} />
       <PopupDisplay />
-      <div className="container max-w-6xl mx-auto px-4 py-4 space-y-6">
-        {/* Welcome Section - Optimized */}
-        <div className="flex items-center justify-between">
+      <div className="container max-w-2xl mx-auto px-4 py-5 space-y-5">
+        {/* Welcome Section */}
+        <div className="flex items-center justify-between animate-fade-in-up">
           <div className="space-y-0.5">
-            <p className="text-sm text-muted-foreground font-medium">Welcome back,</p>
-            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              {firstName}! 👋
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Welcome back</p>
+            <h1 className="text-2xl font-heading font-bold">
+              {firstName} 👋
             </h1>
           </div>
           {canCreate && (
-            <Button 
-              onClick={() => navigate('/ai-studio')} 
+            <Button
+              onClick={() => navigate('/ai-studio')}
               size="sm"
-              className="hidden md:flex gap-2 shadow-lg hover:shadow-xl transition-all"
+              className="hidden md:flex gap-2"
             >
               <Lightbulb className="h-4 w-4" />
               AI Studio
@@ -140,59 +127,63 @@ export default function Home() {
         </div>
 
         {/* Slideshow */}
-        <Slideshow />
+        <div className="animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+          <Slideshow />
+        </div>
 
-        {/* Stats Grid - With loading state */}
-        {statsLoading ? <StatsSkeleton /> : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {statsData.map((stat, index) => (
-              <StatCard key={index} {...stat} />
-            ))}
-          </div>
-        )}
+        {/* Stats */}
+        <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+          {statsLoading ? <StatsSkeleton /> : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {statsData.map((stat, index) => (
+                <StatCard key={index} {...stat} />
+              ))}
+            </div>
+          )}
+        </div>
 
-        {/* Quick Actions - Modernized */}
+        {/* Quick Actions */}
         {canCreate && (
-          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden">
+          <Card className="border-0 shadow-soft overflow-hidden animate-fade-in-up" style={{ animationDelay: '150ms' }}>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-lg">Quick Actions</h3>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-heading font-bold text-sm">Quick Actions</h3>
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                 <CreatePostDialog />
                 {isAdmin && <CreateEventDialog />}
-                <Button 
-                  variant="outline" 
-                  className="h-auto flex-col gap-2 py-4 border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200" 
+                <Button
+                  variant="outline"
+                  className="h-auto flex-col gap-2 py-3.5 border-2 border-dashed hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
                   onClick={() => navigate('/achievements')}
                 >
-                  <div className="p-2 rounded-lg bg-amber-500/10">
-                    <Trophy className="h-5 w-5 text-amber-500" />
+                  <div className="p-2 rounded-lg bg-accent/10">
+                    <Trophy className="h-4 w-4 text-accent" />
                   </div>
-                  <span className="text-xs font-medium">Achievements</span>
+                  <span className="text-[11px] font-semibold">Achievements</span>
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-auto flex-col gap-2 py-4 border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200" 
+                <Button
+                  variant="outline"
+                  className="h-auto flex-col gap-2 py-3.5 border-2 border-dashed hover:border-primary/40 hover:bg-primary/5 transition-all duration-200"
                   onClick={() => navigate('/chat')}
                 >
-                  <div className="p-2 rounded-lg bg-accent/10">
-                    <MessageCircle className="h-5 w-5 text-accent" />
+                  <div className="p-2 rounded-lg bg-secondary/10">
+                    <MessageCircle className="h-4 w-4 text-secondary" />
                   </div>
-                  <span className="text-xs font-medium">Start Chat</span>
+                  <span className="text-[11px] font-semibold">Start Chat</span>
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Community Feed - With header */}
-        <div className="space-y-4">
+        {/* Community Feed */}
+        <div className="space-y-3 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-bold text-xl">Community Feed</h2>
-              <p className="text-xs text-muted-foreground">Latest updates from your community</p>
+              <h2 className="font-heading font-bold text-lg">Community Feed</h2>
+              <p className="text-[11px] text-muted-foreground">Latest updates from your community</p>
             </div>
             {canCreate && <CreatePostDialog />}
           </div>

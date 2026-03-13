@@ -13,8 +13,6 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
-  
-  // Only show chatbot on home page
   const showChatbot = location.pathname === '/';
 
   return (
@@ -22,11 +20,11 @@ export function Layout({ children }: LayoutProps) {
       <Header onMenuClick={() => setMenuOpen(true)} />
       <HamburgerMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
       <NotificationPermissionPrompt />
-      
-      <main className="pb-20 md:pb-8">
+
+      <main className="pb-20 md:pb-6">
         {children}
       </main>
-      
+
       <BottomNavigation />
       {showChatbot && <EnhancedChatbot />}
     </div>
