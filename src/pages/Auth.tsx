@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,19 +7,19 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, UserCheck } from 'lucide-react';
 import { PostLoginVerification } from '@/components/auth/PostLoginVerification';
 import parivartanLogo from '@/assets/parivartan-logo.png';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, signUp, resetPassword, user, requiresVerification, pendingVerificationUserId, completeVerification, cancelVerification } = useAuth();
+  const { signIn, signUp, resetPassword, user, isGuest, requiresVerification, pendingVerificationUserId, completeVerification, cancelVerification, continueAsViewer } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && !requiresVerification) navigate('/');
-  }, [user, requiresVerification, navigate]);
+    if (user && !requiresVerification && !isGuest) navigate('/');
+  }, [user, requiresVerification, isGuest, navigate]);
 
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ email: '', password: '', confirmPassword: '', fullName: '' });
@@ -144,11 +144,32 @@ export default function Auth() {
               </form>
             </TabsContent>
           </Tabs>
+
+          {/* Continue as Viewer */}
+          <div className="mt-5 pt-4 border-t">
+            <Button
+              variant="outline"
+              className="w-full h-11 rounded-xl gap-2 text-muted-foreground hover:text-foreground"
+              onClick={continueAsViewer}
+              disabled={isLoading}
+            >
+              <UserCheck className="h-4 w-4" />
+              Continue as Viewer
+            </Button>
+            <p className="text-[10px] text-muted-foreground text-center mt-2">
+              Browse posts, events & announcements without signing in
+            </p>
+          </div>
         </CardContent>
         <CardContent className="pt-0 pb-5">
-          <div className="text-center text-[10px] text-muted-foreground border-t pt-4">
+          <div className="text-center text-[10px] text-muted-foreground border-t pt-4 space-y-2">
+            <div className="flex items-center justify-center gap-3">
+              <Link to="/privacy" className="hover:text-primary transition-colors underline">Privacy Policy</Link>
+              <span>•</span>
+              <Link to="/terms" className="hover:text-primary transition-colors underline">Terms of Service</Link>
+            </div>
             <p>Created with ❤️ by</p>
-            <div className="flex items-center justify-center gap-3 mt-1.5">
+            <div className="flex items-center justify-center gap-3">
               <a href="https://www.instagram.com/beinghayat.er?igsh=MXV5dXFsZW5ycHY2cw==" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors font-medium">Hayat(Abdul Salam)</a>
               <span>•</span>
               <a href="https://www.instagram.com/parivartan_miet?igsh=OHlnY3R5aDR5eGt6" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors font-medium">Parivartan</a>

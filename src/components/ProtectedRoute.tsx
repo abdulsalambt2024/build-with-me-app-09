@@ -18,7 +18,7 @@ const roleHierarchy: Record<UserRole, number> = {
 };
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, isGuest } = useAuth();
 
   if (loading) {
     return (
@@ -33,8 +33,22 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     );
   }
 
-  if (!user) {
+  if (!user && !isGuest) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Guest viewers can only access viewer-level pages
+  if (isGuest && requiredRole && requiredRole !== 'viewer') {
+    return (
+      <div className="container max-w-7xl mx-auto p-4">
+        <Card className="p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">Sign In Required</h2>
+          <p className="text-muted-foreground">
+            Please sign in to access this feature. Guest viewers have limited access.
+          </p>
+        </Card>
+      </div>
+    );
   }
 
   if (requiredRole && role) {
