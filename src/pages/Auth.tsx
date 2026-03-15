@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { PostLoginVerification } from '@/components/auth/PostLoginVerification';
+import parivartanLogo from '@/assets/parivartan-logo.png';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
