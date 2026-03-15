@@ -1,6 +1,7 @@
-import { Menu, Sparkles } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
+import parivartanLogo from '@/assets/parivartan-logo.png';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -20,9 +21,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shadow-soft">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
-            </div>
+            <img src={parivartanLogo} alt="Parivartan" className="h-9 w-9 object-contain" />
             <h1 className="text-lg font-heading font-bold text-gradient-primary">
               Parivartan
             </h1>

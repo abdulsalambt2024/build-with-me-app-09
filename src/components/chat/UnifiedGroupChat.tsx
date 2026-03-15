@@ -271,9 +271,7 @@ export function UnifiedGroupChat() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-700 dark:to-teal-700 text-white p-3 sm:p-4 flex items-center gap-3">
-        <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-          <Users className="h-6 w-6" />
-        </div>
+        <img src="/parivartan-logo.png" alt="Parivartan" className="w-11 h-11 rounded-full object-contain bg-white/20 p-1 backdrop-blur-sm" />
         <div className="flex-1 min-w-0" onClick={() => setShowGroupInfo(true)} role="button">
           <h2 className="font-bold truncate text-lg">PARIVARTAN Family 😇</h2>
           <div className="flex items-center gap-2">

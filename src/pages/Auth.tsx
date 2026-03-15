@@ -69,9 +69,7 @@ export default function Auth() {
       <Card className="w-full max-w-md border-0 shadow-elevated relative animate-scale-in">
         <CardHeader className="text-center space-y-4 pb-2">
           <div className="flex justify-center">
-            <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center shadow-medium">
-              <Sparkles className="h-7 w-7 text-primary-foreground" />
-            </div>
+            <img src={parivartanLogo} alt="Parivartan" className="h-20 w-20 object-contain" />
           </div>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-heading">Parivartan MIET</CardTitle>
