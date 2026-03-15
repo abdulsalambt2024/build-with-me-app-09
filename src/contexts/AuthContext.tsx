@@ -11,12 +11,14 @@ interface AuthContextType {
   session: Session | null;
   role: UserRole | null;
   loading: boolean;
+  isGuest: boolean;
   requiresVerification: boolean;
   pendingVerificationUserId: string | null;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
+  continueAsViewer: () => void;
   completeVerification: () => void;
   cancelVerification: () => void;
 }
@@ -28,19 +30,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
   const [requiresVerification, setRequiresVerification] = useState(false);
   const [pendingVerificationUserId, setPendingVerificationUserId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if guest session exists
+    const guestSession = sessionStorage.getItem('parivartan_guest');
+    if (guestSession) {
+      setIsGuest(true);
+      setRole('viewer');
+      setUser({ id: 'guest', email: 'viewer@guest.local' } as any);
+      setLoading(false);
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (requiresVerification) return;
+        if (isGuest && !session) return; // Don't clear guest on no session
         setSession(session);
-        setUser(session?.user ?? null);
+        setUser(session?.user ?? (isGuest ? { id: 'guest', email: 'viewer@guest.local' } as any : null));
         if (session?.user) {
+          setIsGuest(false);
+          sessionStorage.removeItem('parivartan_guest');
           setTimeout(() => fetchUserRole(session.user.id), 0);
-        } else {
+        } else if (!isGuest) {
           setRole(null);
         }
         setLoading(false);
@@ -48,9 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchUserRole(session.user.id);
+      if (session?.user) {
+        setSession(session);
+        setUser(session.user);
+        setIsGuest(false);
+        sessionStorage.removeItem('parivartan_guest');
+        fetchUserRole(session.user.id);
+      }
       setLoading(false);
     });
 
@@ -99,6 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Clear guest state on real login
+      setIsGuest(false);
+      sessionStorage.removeItem('parivartan_guest');
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
@@ -115,6 +138,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       return { error };
     }
+  };
+
+  const continueAsViewer = () => {
+    sessionStorage.setItem('parivartan_guest', 'true');
+    setIsGuest(true);
+    setRole('viewer');
+    setUser({ id: 'guest', email: 'viewer@guest.local' } as any);
+    toast({ title: "Welcome!", description: "You're browsing as a Viewer. Sign in for full access." });
+    navigate('/');
   };
 
   const completeVerification = async () => {
@@ -141,6 +173,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      if (isGuest) {
+        sessionStorage.removeItem('parivartan_guest');
+        setIsGuest(false);
+        setUser(null);
+        setSession(null);
+        setRole(null);
+        toast({ title: "Signed out", description: "You've exited viewer mode." });
+        navigate('/auth');
+        return;
+      }
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
@@ -169,8 +211,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, role, loading, requiresVerification, pendingVerificationUserId,
-      signUp, signIn, signOut, resetPassword, completeVerification, cancelVerification,
+      user, session, role, loading, isGuest, requiresVerification, pendingVerificationUserId,
+      signUp, signIn, signOut, resetPassword, continueAsViewer, completeVerification, cancelVerification,
     }}>
       {children}
     </AuthContext.Provider>
