@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import parivartanLogo from '@/assets/parivartan-logo.png';
 
 interface HamburgerMenuProps {
   isOpen: boolean;
@@ -50,9 +51,7 @@ export function HamburgerMenu({ isOpen, onClose }: HamburgerMenuProps) {
           {/* Header */}
           <div className="flex items-center justify-between p-5 pb-4">
             <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-heading font-bold text-sm">P</span>
-              </div>
+              <img src={parivartanLogo} alt="Parivartan" className="h-10 w-10 object-contain" />
               <div>
                 <h2 className="font-heading font-bold text-base">Parivartan</h2>
                 <p className="text-[10px] text-muted-foreground font-medium">Community Platform</p>

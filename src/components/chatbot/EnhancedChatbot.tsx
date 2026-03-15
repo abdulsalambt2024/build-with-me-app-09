@@ -211,8 +211,8 @@ export function EnhancedChatbot() {
           
           {/* Speech bubble near PARI's hand */}
           {!isOpen && (
-            <div className="absolute top-[58%] -left-1 -translate-x-[94%] -translate-y-1/2 rounded-2xl border-2 border-primary/25 bg-background px-3 py-2 shadow-xl w-[132px] min-h-[72px] transition-all duration-500">
-              <p className="text-[11px] font-semibold leading-snug text-primary animate-fade-in" key={currentCommentIndex}>
+            <div className="absolute top-[50%] left-0 -translate-x-[100%] -translate-y-1/2 rounded-2xl border-2 border-primary/25 bg-background px-2.5 py-2 shadow-xl w-[110px] min-h-[80px] transition-all duration-500">
+              <p className="text-[12px] font-semibold leading-snug text-primary animate-fade-in" key={currentCommentIndex}>
                 {currentBubbleText}
               </p>
               <div className="absolute right-[-7px] top-1/2 h-0 w-0 -translate-y-1/2 border-b-[6px] border-b-transparent border-l-[7px] border-l-primary/25 border-t-[6px] border-t-transparent" />
