@@ -118,6 +118,8 @@
     -webkit-text-size-adjust: 100%;
     font-size: 16px;
     scroll-behavior: smooth;
+    /* Support fullscreen without notch */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
   body {
@@ -126,6 +128,7 @@
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
   }
 
   h1, h2, h3, h4, h5, h6 {
