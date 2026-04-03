@@ -21,7 +21,7 @@ export function Layout({ children }: LayoutProps) {
       <HamburgerMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
       <NotificationPermissionPrompt />
 
-      <main className="pb-20 md:pb-6">
+      <main className="pb-20 md:pb-6 pt-[env(safe-area-inset-top)]">
         {children}
       </main>
 

@@ -143,13 +143,26 @@ export default function AppGuide() {
           </CardContent>
         </Card>
 
+        {/* About Parivartan */}
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-5 space-y-3">
+            <h3 className="font-heading font-bold text-sm">About Parivartan</h3>
+            <div className="text-xs text-muted-foreground space-y-2 leading-relaxed">
+              <p>This application represents the work of a non-profit organization and social working committee dedicated to supporting students in rural areas who do not have access to quality education. The initiative focuses on providing learning opportunities, academic guidance, and educational resources to underprivileged students in villages, helping them build a better academic foundation and future.</p>
+              <p>The initiative is operated and governed by Meerut Institute of Engineering and Technology (MIET), Meerut, Uttar Pradesh, which provides guidance and support for its activities and outreach programs.</p>
+              <p>This application serves as a digital platform to connect volunteers, educators, and students, enabling easier access to educational support and community-driven learning initiatives.</p>
+              <p className="font-medium text-foreground">All rights, credits, and ownership of this application belong to Abdul Salam (abdul.salam.bt.2024@miet.ac.in)</p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Contact */}
         <Card className="border-0 shadow-md">
           <CardContent className="p-4 text-center space-y-2">
             <p className="text-sm font-medium">Need help?</p>
             <p className="text-xs text-muted-foreground">
               Contact us at{' '}
-              <a href="mailto:hayatamr9608@gmail.com" className="text-primary hover:underline font-medium">hayatamr9608@gmail.com</a>
+              <a href="mailto:abdul.salam.bt.2024@miet.ac.in" className="text-primary hover:underline font-medium">abdul.salam.bt.2024@miet.ac.in</a>
             </p>
           </CardContent>
         </Card>

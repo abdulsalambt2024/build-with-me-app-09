@@ -54,7 +54,7 @@ export function HamburgerMenu({ isOpen, onClose }: HamburgerMenuProps) {
               <img src={parivartanLogo} alt="Parivartan" className="h-10 w-10 object-contain" />
               <div>
                 <h2 className="font-heading font-bold text-base">Parivartan</h2>
-                <p className="text-[10px] text-muted-foreground font-medium">Community Platform</p>
+                <p className="text-[9px] text-muted-foreground font-medium leading-tight">Education for Rural Youth • MIET</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-xl">

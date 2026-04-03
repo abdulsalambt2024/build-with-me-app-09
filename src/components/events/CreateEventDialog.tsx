@@ -123,12 +123,17 @@ export function CreateEventDialog() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.description.trim() || !formData.event_date) return;
+    
+    // Convert local datetime to ISO string for Supabase
+    const eventDate = new Date(formData.event_date).toISOString();
+    const endDate = formData.end_date ? new Date(formData.end_date).toISOString() : null;
+    
     await createEvent.mutateAsync({
       title: formData.title,
       description: formData.description,
       location: formData.location || null,
-      event_date: formData.event_date,
-      end_date: formData.end_date || null,
+      event_date: eventDate,
+      end_date: endDate,
       registration_url: formData.registration_url || null,
       banner_url: formData.banner_url || null,
       max_attendees: formData.max_attendees ? parseInt(formData.max_attendees) : null
