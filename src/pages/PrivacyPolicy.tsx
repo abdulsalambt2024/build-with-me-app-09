@@ -28,7 +28,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-lg font-heading font-bold">1. Introduction</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Parivartan MIET ("we", "our", or "us") is committed to protecting the privacy of our users. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application. By using Parivartan, you agree to the terms outlined in this policy.
+                Parivartan is a non-profit initiative operated and governed by Meerut Institute of Engineering and Technology (MIET), Meerut, Uttar Pradesh. This application serves as a digital platform to connect volunteers, educators, and students, enabling easier access to educational support and community-driven learning initiatives for underprivileged rural students. By using Parivartan, you agree to the terms outlined in this policy. All rights, credits, and ownership belong to Abdul Salam (abdul.salam.bt.2024@miet.ac.in).
               </p>
             </section>
 
