@@ -52,7 +52,7 @@ const StatsSkeleton = () => (
 );
 
 export default function Home() {
-  const { user, role } = useAuth();
+  const { user, role, isGuest } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const canCreate = role !== 'viewer';
