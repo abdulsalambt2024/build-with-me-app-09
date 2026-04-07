@@ -1,5 +1,9 @@
-import { corsHeaders } from '@supabase/supabase-js/cors'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 const ONESIGNAL_APP_ID = 'e3cf890a-22e9-4e34-bfc8-4362b82a53d0'
 
