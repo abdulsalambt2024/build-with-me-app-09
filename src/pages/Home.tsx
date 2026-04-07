@@ -107,6 +107,21 @@ export default function Home() {
       <PullToRefresh onRefresh={handleRefresh} />
       <PopupDisplay />
       <div className="container max-w-2xl mx-auto px-4 py-5 space-y-5">
+        {/* Guest Banner */}
+        {isGuest && (
+          <Card className="border-0 shadow-soft bg-gradient-to-r from-primary/10 to-secondary/10 animate-fade-in-up">
+            <CardContent className="p-4 flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <p className="font-heading font-bold text-sm">You're browsing as a guest</p>
+                <p className="text-xs text-muted-foreground">Sign in to access all features like chat, posts, and more.</p>
+              </div>
+              <Button size="sm" onClick={() => navigate('/auth')} className="gap-2 shrink-0">
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         {/* Welcome Section */}
         <div className="flex items-center justify-between animate-fade-in-up">
           <div className="space-y-0.5">
