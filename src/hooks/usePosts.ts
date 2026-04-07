@@ -104,11 +104,18 @@ export function useCreatePost() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       toast({
         title: 'Success',
         description: 'Post created successfully',
+      });
+      // Send push notification
+      sendPushNotification({
+        title: '📝 New Post',
+        message: `New post: ${data.title}`,
+        type: 'post',
+        excludeUserId: data.user_id,
       });
     },
     onError: (error: Error) => {
