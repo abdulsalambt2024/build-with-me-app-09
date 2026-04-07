@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { sendPushNotification } from '@/lib/pushNotifications';
 
 export interface Post {
   id: string;
@@ -103,11 +104,18 @@ export function useCreatePost() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       toast({
         title: 'Success',
         description: 'Post created successfully',
+      });
+      // Send push notification
+      sendPushNotification({
+        title: '📝 New Post',
+        message: `New post: ${data.title}`,
+        type: 'post',
+        excludeUserId: data.user_id,
       });
     },
     onError: (error: Error) => {
