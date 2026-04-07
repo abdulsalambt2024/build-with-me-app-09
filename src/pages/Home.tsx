@@ -13,6 +13,7 @@ import { PopupDisplay } from '@/components/popup/PopupDisplay';
 import { memo, useCallback, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { LogIn } from 'lucide-react';
 
 const StatCard = memo(({ icon: Icon, value, label, color }: {
   icon: React.ElementType;
