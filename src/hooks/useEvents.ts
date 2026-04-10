@@ -158,6 +158,9 @@ export function useDeleteEvent() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Delete associated RSVPs first (cascade)
+      await supabase.from('event_rsvps').delete().eq('event_id', id);
+      
       const { error } = await supabase
         .from('events')
         .delete()
@@ -169,7 +172,7 @@ export function useDeleteEvent() {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       toast({
         title: 'Success',
-        description: 'Event deleted successfully',
+        description: 'Event and all associated data deleted permanently',
       });
     },
   });
