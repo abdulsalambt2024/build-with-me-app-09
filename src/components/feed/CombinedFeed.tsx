@@ -119,14 +119,7 @@ export function CombinedFeed() {
         );
       }
       
-      if (filter === 'all') {
-        queries.push(
-          supabase.from('events')
-            .select('*')
-            .order('event_date', { ascending: false })
-            .limit(10)
-        );
-      }
+      // Events removed from feed per user request - they are only shown on the Events page
 
       const results = await Promise.all(queries);
       
@@ -182,19 +175,7 @@ export function CombinedFeed() {
         });
       }
 
-      if (filter === 'all') {
-        const eventsRes = results[resultIndex++];
-        eventsRes.data?.forEach((e: any) => {
-          items.push({
-            id: e.id, type: 'event', title: e.title, content: e.description,
-            created_at: e.created_at, user_id: e.created_by,
-            user_name: profileMap.get(e.created_by)?.full_name || 'Admin',
-            avatar_url: profileMap.get(e.created_by)?.avatar_url,
-            event_date: e.event_date,
-            media_urls: e.banner_url ? [e.banner_url] : undefined
-          });
-        });
-      }
+      // Events removed from feed
 
       return items.sort((a, b) => {
         if (a.is_pinned && !b.is_pinned) return -1;
@@ -205,13 +186,15 @@ export function CombinedFeed() {
     staleTime: 1000 * 30, // 30s stale for faster feel
   });
 
-  // Live updates via realtime subscriptions
+  // Live updates via realtime subscriptions (events removed from feed)
   useEffect(() => {
     const channels = [
       supabase.channel('feed-posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => { refetch(); }),
       supabase.channel('feed-announcements').on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, () => { refetch(); }),
-      supabase.channel('feed-events').on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => { refetch(); }),
     ];
+    channels.forEach(c => c.subscribe());
+    return () => { channels.forEach(c => supabase.removeChannel(c)); };
+  }, [refetch]);
     channels.forEach(c => c.subscribe());
     return () => { channels.forEach(c => supabase.removeChannel(c)); };
   }, [refetch]);

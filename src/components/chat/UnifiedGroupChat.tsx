@@ -16,6 +16,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { chatMessageSchema } from '@/lib/validation';
+import { sendPushNotification } from '@/lib/pushNotifications';
 import { GroupInfoPanel } from './GroupInfoPanel';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -154,7 +155,18 @@ export function UnifiedGroupChat() {
       });
       if (error) throw error;
     },
-    onSuccess: () => { setMessage(''); setReplyingTo(null); queryClient.invalidateQueries({ queryKey: ['unified-chat-messages'] }); },
+    onSuccess: () => {
+      setMessage('');
+      setReplyingTo(null);
+      queryClient.invalidateQueries({ queryKey: ['unified-chat-messages'] });
+      // Send push notification for new chat message
+      sendPushNotification({
+        title: '💬 New Chat Message',
+        message: `New message in Community Chat`,
+        type: 'chat',
+        excludeUserId: user?.id,
+      });
+    },
     onError: (error: Error) => toast.error(error.message || 'Failed to send message')
   });
 
