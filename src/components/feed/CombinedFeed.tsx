@@ -195,9 +195,8 @@ export function CombinedFeed() {
     channels.forEach(c => c.subscribe());
     return () => { channels.forEach(c => supabase.removeChannel(c)); };
   }, [refetch]);
-    channels.forEach(c => c.subscribe());
-    return () => { channels.forEach(c => supabase.removeChannel(c)); };
-  }, [refetch]);
+
+
 
   // Fetch likes for a post
   const { data: likesUsers } = useQuery({
