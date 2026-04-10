@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Plus, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { sendPushNotification } from '@/lib/pushNotifications';
 
 export function TaskManagement() {
   const { role } = useAuth();
@@ -117,7 +118,7 @@ export function TaskManagement() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Task created successfully');
       setOpen(false);
@@ -127,6 +128,13 @@ export function TaskManagement() {
         assigned_to: '',
         deadline: '',
         priority: 'medium'
+      });
+      // Send push notification to assigned user
+      sendPushNotification({
+        title: '📋 New Task Assigned',
+        message: `You have a new task: ${data.title}`,
+        type: 'task',
+        excludeUserId: data.assigned_by,
       });
     }
   });
