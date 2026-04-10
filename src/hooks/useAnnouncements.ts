@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { sendPushNotification } from '@/lib/pushNotifications';
 import { toast } from '@/hooks/use-toast';
 
 export interface Announcement {
@@ -104,11 +105,17 @@ export function useCreateAnnouncement() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
       toast({
         title: 'Success',
         description: 'Announcement created successfully',
+      });
+      sendPushNotification({
+        title: '📢 New Announcement',
+        message: `${data.title}`,
+        type: 'announcement',
+        excludeUserId: data.created_by,
       });
     },
     onError: (error: Error) => {
