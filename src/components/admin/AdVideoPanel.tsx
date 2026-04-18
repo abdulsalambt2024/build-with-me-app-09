@@ -146,11 +146,11 @@ export function AdVideoPanel() {
             <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Ad Video</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs">Upload video file</Label>
-                <Input type="file" accept="video/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); }} disabled={upload.isPending} />
+                <Label className="text-xs">Upload video or image</Label>
+                <Input type="file" accept="video/*,image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); }} disabled={upload.isPending} />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Or paste video URL</Label>
+                <Label className="text-xs">Or paste media URL (video or image)</Label>
                 <Input value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://..." />
               </div>
               <div className="space-y-1">
