@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FileText, BarChart3, Settings as SettingsIcon, Bug, CreditCard, CalendarCheck, Image, Shield, Bell, MessageSquare, ClipboardList, UserCog, Database, Sparkles } from 'lucide-react';
+import { Users, FileText, BarChart3, Settings as SettingsIcon, Bug, CreditCard, CalendarCheck, Image, Shield, Bell, MessageSquare, ClipboardList, UserCog, Database, Sparkles, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Admin() {
@@ -23,6 +23,7 @@ export default function Admin() {
     ...(isSuperAdmin ? [{ title: 'Badge Management', description: 'Grant verification badges', icon: Shield, path: '/admin/badges' }] : []),
     { title: 'PARI FAQ Management', description: 'Customize chatbot knowledge', icon: MessageSquare, path: '/admin/chatbot-faq' },
     ...(isSuperAdmin ? [{ title: 'PARI Speech Bubbles', description: 'Manage rotating PARI comments', icon: Sparkles, path: '/admin/pari-comments' }] : []),
+    ...(isSuperAdmin ? [{ title: 'Advertisement Videos', description: 'Manage floating ad video on Home', icon: Video, path: '/admin/ad-videos' }] : []),
     ...(isSuperAdmin ? [{ title: 'Error Logs', description: 'Monitor application errors', icon: Bug, path: '/admin/errors' }] : []),
     { title: 'Payment Transactions', description: 'View and verify payments', icon: CreditCard, path: '/admin/payments' },
     { title: 'System Settings', description: 'Configure app settings', icon: SettingsIcon, path: '/admin/settings' },
