@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isGuest, setIsGuest] = useState(false);
   const [requiresVerification, setRequiresVerification] = useState(false);
   const [pendingVerificationUserId, setPendingVerificationUserId] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // within BrowserRouter
 
   useEffect(() => {
     // Check if guest session exists
