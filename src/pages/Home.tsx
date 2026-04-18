@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { CreatePostDialog } from '@/components/posts/CreatePostDialog';
 import { CreateEventDialog } from '@/components/events/CreateEventDialog';
 import { PopupDisplay } from '@/components/popup/PopupDisplay';
-import { AdVideoPanel } from '@/components/admin/AdVideoPanel';
+import { FloatingAdVideo } from '@/components/home/FloatingAdVideo';
 import { memo, useCallback, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
@@ -107,11 +107,8 @@ export default function Home() {
     <div className="min-h-screen">
       <PullToRefresh onRefresh={handleRefresh} />
       <PopupDisplay />
-      <div className="container max-w-7xl mx-auto px-4 py-5 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5">
-        {/* Left sidebar — Ad Video Panel */}
-        <aside className="hidden lg:block space-y-4">
-          <AdVideoPanel />
-        </aside>
+      <FloatingAdVideo />
+      <div className="container max-w-3xl mx-auto px-4 py-5">
         <div className="max-w-2xl mx-auto w-full space-y-5">
         {/* Guest Banner */}
         {isGuest && (
@@ -210,10 +207,6 @@ export default function Home() {
             {canCreate && <CreatePostDialog />}
           </div>
           <CombinedFeed />
-        </div>
-        {/* Mobile: show ad below feed */}
-        <div className="lg:hidden">
-          <AdVideoPanel />
         </div>
         </div>
       </div>
