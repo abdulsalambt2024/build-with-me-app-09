@@ -1,18 +1,25 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { X, Minimize2, Maximize2 } from 'lucide-react';
+import { X, Minimize2, Maximize2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface AdVideo {
+interface AdItem {
   id: string;
   video_url: string;
   title: string | null;
 }
 
+const STORAGE_KEY = 'floating-ad-position';
+
 export function FloatingAdVideo() {
   const [closed, setClosed] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const dragState = useRef<{ startX: number; startY: number; origX: number; origY: number; dragging: boolean }>({
+    startX: 0, startY: 0, origX: 0, origY: 0, dragging: false,
+  });
+  const elRef = useRef<HTMLDivElement>(null);
 
   const { data: ads } = useQuery({
     queryKey: ['ad-videos-floating'],
@@ -23,53 +30,104 @@ export function FloatingAdVideo() {
         .eq('is_active', true)
         .order('display_order', { ascending: true })
         .limit(1);
-      return (data || []) as AdVideo[];
+      return (data || []) as AdItem[];
     },
   });
 
+  // Load saved position
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (typeof p.x === 'number' && typeof p.y === 'number') setPos(p);
+      }
+    } catch {}
+  }, []);
+
+  // Default position: bottom-left with safe spacing
+  useEffect(() => {
+    if (pos === null && elRef.current) {
+      const w = elRef.current.offsetWidth || 260;
+      const h = elRef.current.offsetHeight || 180;
+      setPos({ x: 12, y: window.innerHeight - h - 96 });
+    }
+  }, [pos]);
+
+  const clamp = (x: number, y: number) => {
+    const el = elRef.current;
+    const w = el?.offsetWidth || 260;
+    const h = el?.offsetHeight || 180;
+    const maxX = window.innerWidth - w - 4;
+    const maxY = window.innerHeight - h - 4;
+    return { x: Math.max(4, Math.min(maxX, x)), y: Math.max(4, Math.min(maxY, y)) };
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!pos) return;
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    dragState.current = {
+      startX: e.clientX, startY: e.clientY,
+      origX: pos.x, origY: pos.y, dragging: true,
+    };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragState.current.dragging) return;
+    const dx = e.clientX - dragState.current.startX;
+    const dy = e.clientY - dragState.current.startY;
+    setPos(clamp(dragState.current.origX + dx, dragState.current.origY + dy));
+  };
+  const onPointerUp = () => {
+    if (!dragState.current.dragging) return;
+    dragState.current.dragging = false;
+    if (pos) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch {}
+    }
+  };
+
   if (closed || !ads || ads.length === 0) return null;
   const ad = ads[0];
+  const url = ad.video_url || '';
+  const isImage = /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(url);
 
   return (
     <div
-      className="fixed z-40 bottom-24 md:bottom-6 left-3 md:left-6 w-[240px] md:w-[300px] rounded-xl overflow-hidden shadow-2xl border border-border bg-card animate-fade-in-up"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      ref={elRef}
+      className="fixed z-40 w-[240px] md:w-[300px] rounded-xl overflow-hidden shadow-2xl border border-border bg-card animate-fade-in-up touch-none select-none"
+      style={{
+        left: pos ? `${pos.x}px` : 12,
+        top: pos ? `${pos.y}px` : undefined,
+        bottom: pos ? undefined : 96,
+      }}
     >
-      <div className="flex items-center justify-between px-2 py-1 bg-muted/80 backdrop-blur">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground truncate">
-          {ad.title || 'Sponsored'}
-        </span>
+      <div
+        className="flex items-center justify-between px-2 py-1 bg-muted/80 backdrop-blur cursor-move"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <div className="flex items-center gap-1 min-w-0">
+          <GripVertical className="h-3 w-3 text-muted-foreground shrink-0" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground truncate">
+            {ad.title || 'Sponsored'}
+          </span>
+        </div>
         <div className="flex items-center gap-0.5">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5"
-            onClick={() => setMinimized((m) => !m)}
-            aria-label={minimized ? 'Expand' : 'Minimize'}
-          >
+          <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => setMinimized((m) => !m)} aria-label={minimized ? 'Expand' : 'Minimize'}>
             {minimized ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
           </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5"
-            onClick={() => setClosed(true)}
-            aria-label="Close"
-          >
+          <Button size="icon" variant="ghost" className="h-5 w-5" onClick={() => setClosed(true)} aria-label="Close">
             <X className="h-3 w-3" />
           </Button>
         </div>
       </div>
       {!minimized && (
-        <video
-          src={ad.video_url}
-          controls
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="w-full aspect-video bg-black"
-        />
+        isImage ? (
+          <img src={url} alt={ad.title || 'Advertisement'} className="w-full aspect-video object-cover bg-black" draggable={false} />
+        ) : (
+          <video src={url} controls autoPlay muted loop playsInline className="w-full aspect-video bg-black" />
+        )
       )}
     </div>
   );
