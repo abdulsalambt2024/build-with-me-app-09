@@ -108,18 +108,20 @@ export function AdVideoPanel() {
     setOpen(true);
   };
 
+  const isImageUrl = (u: string) => /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(u);
+
   // Public viewer: show first active ad (for any user)
   if (!isSuperAdmin) {
     if (!ads || ads.length === 0) return null;
+    const u = ads[0].video_url;
     return (
       <Card className="border-0 shadow-soft overflow-hidden">
         <CardContent className="p-0">
-          <video
-            src={ads[0].video_url}
-            controls
-            playsInline
-            className="w-full aspect-video bg-black"
-          />
+          {isImageUrl(u) ? (
+            <img src={u} alt={ads[0].title || 'Advertisement'} className="w-full aspect-video object-cover bg-black" />
+          ) : (
+            <video src={u} controls playsInline className="w-full aspect-video bg-black" />
+          )}
           {ads[0].title && (
             <div className="p-2 text-xs font-medium text-muted-foreground">{ads[0].title}</div>
           )}
@@ -146,11 +148,11 @@ export function AdVideoPanel() {
             <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Ad Video</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs">Upload video file</Label>
-                <Input type="file" accept="video/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); }} disabled={upload.isPending} />
+                <Label className="text-xs">Upload video or image</Label>
+                <Input type="file" accept="video/*,image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); }} disabled={upload.isPending} />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Or paste video URL</Label>
+                <Label className="text-xs">Or paste media URL (video or image)</Label>
                 <Input value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://..." />
               </div>
               <div className="space-y-1">
@@ -174,7 +176,11 @@ export function AdVideoPanel() {
       </CardHeader>
       <CardContent className="space-y-2 p-3 pt-0">
         {ads && ads.length > 0 && (
-          <video src={ads[0].video_url} controls playsInline className="w-full aspect-video bg-black rounded-lg" />
+          isImageUrl(ads[0].video_url) ? (
+            <img src={ads[0].video_url} alt={ads[0].title || 'Advertisement'} className="w-full aspect-video object-cover bg-black rounded-lg" />
+          ) : (
+            <video src={ads[0].video_url} controls playsInline className="w-full aspect-video bg-black rounded-lg" />
+          )
         )}
         <div className="space-y-1">
           {(allAds || []).map((ad) => (
