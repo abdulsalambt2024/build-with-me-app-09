@@ -66,15 +66,10 @@ serve(async (req) => {
 
     if (createError) throw createError;
 
-    // Create profile
-    const { error: profileError } = await supabase
+    // Profile is auto-created by handle_new_user trigger; upsert in case of race
+    await supabase
       .from('profiles')
-      .insert({
-        user_id: authData.user.id,
-        full_name: fullName
-      });
-
-    if (profileError) throw profileError;
+      .upsert({ user_id: authData.user.id, full_name: fullName }, { onConflict: 'user_id' });
 
     // Delete any existing roles
     await supabase
