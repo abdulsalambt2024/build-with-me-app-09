@@ -50,6 +50,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_video_settings: {
+        Row: {
+          created_at: string
+          created_by: string
+          display_order: number
+          id: string
+          is_active: boolean
+          title: string | null
+          updated_at: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          title?: string | null
+          updated_at?: string
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          title?: string | null
+          updated_at?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
       admin_tasks: {
         Row: {
           assigned_to: string | null

@@ -37,14 +37,14 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     return <Navigate to="/auth" replace />;
   }
 
-  // Guest viewers can only access viewer-level pages
+  // Guest viewers can only access viewer-level pages (member+ requires sign-in)
   if (isGuest && requiredRole && requiredRole !== 'viewer') {
     return (
       <div className="container max-w-7xl mx-auto p-4">
         <Card className="p-8 text-center">
           <h2 className="text-2xl font-bold mb-4">Sign In Required</h2>
-          <p className="text-muted-foreground">
-            Please sign in to access this feature. Guest viewers have limited access.
+          <p className="text-muted-foreground mb-4">
+            Please sign in to access this feature. Guest viewers can browse posts, events, and donations.
           </p>
         </Card>
       </div>
