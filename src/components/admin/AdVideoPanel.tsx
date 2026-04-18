@@ -108,18 +108,20 @@ export function AdVideoPanel() {
     setOpen(true);
   };
 
+  const isImageUrl = (u: string) => /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(u);
+
   // Public viewer: show first active ad (for any user)
   if (!isSuperAdmin) {
     if (!ads || ads.length === 0) return null;
+    const u = ads[0].video_url;
     return (
       <Card className="border-0 shadow-soft overflow-hidden">
         <CardContent className="p-0">
-          <video
-            src={ads[0].video_url}
-            controls
-            playsInline
-            className="w-full aspect-video bg-black"
-          />
+          {isImageUrl(u) ? (
+            <img src={u} alt={ads[0].title || 'Advertisement'} className="w-full aspect-video object-cover bg-black" />
+          ) : (
+            <video src={u} controls playsInline className="w-full aspect-video bg-black" />
+          )}
           {ads[0].title && (
             <div className="p-2 text-xs font-medium text-muted-foreground">{ads[0].title}</div>
           )}
