@@ -10,6 +10,8 @@ import { toast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, UserCheck } from 'lucide-react';
 import { PostLoginVerification } from '@/components/auth/PostLoginVerification';
 import { supabase } from '@/integrations/supabase/client';
+import { Browser } from '@capacitor/browser';
+import { isNativePlatform, getOAuthRedirectTo } from '@/lib/native';
 import parivartanLogo from '@/assets/parivartan-logo.png';
 
 export default function Auth() {
@@ -48,12 +50,34 @@ export default function Auth() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` },
-    });
-    if (error) toast({ title: "Google Sign-In Error", description: error.message, variant: "destructive" });
-    setIsLoading(false);
+    try {
+      const redirectTo = getOAuthRedirectTo();
+
+      if (isNativePlatform()) {
+        // Native (Android/iOS): get the OAuth URL without redirecting the WebView,
+        // then open it in Chrome Custom Tabs / SFSafariViewController.
+        // The deep link `parivartan://auth-callback` is captured by useDeepLinkAuth.
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo, skipBrowserRedirect: true },
+        });
+        if (error) throw error;
+        if (data?.url) {
+          await Browser.open({ url: data.url, presentationStyle: 'popover' });
+        }
+      } else {
+        // Web: standard browser redirect flow.
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo },
+        });
+        if (error) throw error;
+      }
+    } catch (err: any) {
+      toast({ title: 'Google Sign-In Error', description: err?.message ?? 'Failed to start sign-in', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
