@@ -57,6 +57,7 @@ export type Database = {
           display_order: number
           id: string
           is_active: boolean
+          link_url: string | null
           title: string | null
           updated_at: string
           video_url: string
@@ -67,6 +68,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          link_url?: string | null
           title?: string | null
           updated_at?: string
           video_url: string
@@ -77,6 +79,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          link_url?: string | null
           title?: string | null
           updated_at?: string
           video_url?: string
