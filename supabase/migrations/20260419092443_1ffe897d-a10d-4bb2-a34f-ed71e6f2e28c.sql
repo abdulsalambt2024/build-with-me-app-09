@@ -1,0 +1,1 @@
+ALTER TABLE public.ad_video_settings ADD COLUMN IF NOT EXISTS link_url text;

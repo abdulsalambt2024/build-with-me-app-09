@@ -15,6 +15,7 @@ interface AdVideo {
   id: string;
   video_url: string;
   title: string | null;
+  link_url: string | null;
   is_active: boolean;
   display_order: number;
 }
@@ -25,7 +26,7 @@ export function AdVideoPanel() {
   const isSuperAdmin = role === 'super_admin';
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AdVideo | null>(null);
-  const [form, setForm] = useState({ video_url: '', title: '', is_active: true, display_order: 0 });
+  const [form, setForm] = useState({ video_url: '', title: '', link_url: '', is_active: true, display_order: 0 });
 
   const { data: ads } = useQuery({
     queryKey: ['ad-videos-active'],
@@ -84,7 +85,7 @@ export function AdVideoPanel() {
       qc.invalidateQueries({ queryKey: ['ad-videos-all'] });
       setOpen(false);
       setEditing(null);
-      setForm({ video_url: '', title: '', is_active: true, display_order: 0 });
+      setForm({ video_url: '', title: '', link_url: '', is_active: true, display_order: 0 });
       toast.success('Saved');
     },
     onError: (e: any) => toast.error(e.message),
@@ -104,7 +105,7 @@ export function AdVideoPanel() {
 
   const startEdit = (ad: AdVideo) => {
     setEditing(ad);
-    setForm({ video_url: ad.video_url, title: ad.title || '', is_active: ad.is_active, display_order: ad.display_order });
+    setForm({ video_url: ad.video_url, title: ad.title || '', link_url: ad.link_url || '', is_active: ad.is_active, display_order: ad.display_order });
     setOpen(true);
   };
 
@@ -138,7 +139,7 @@ export function AdVideoPanel() {
           <Video className="h-4 w-4 text-primary" />
           Ad Videos
         </CardTitle>
-        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditing(null); setForm({ video_url: '', title: '', is_active: true, display_order: 0 }); } }}>
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditing(null); setForm({ video_url: '', title: '', link_url: '', is_active: true, display_order: 0 }); } }}>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
               <Plus className="h-3 w-3 mr-1" /> Add
@@ -158,6 +159,10 @@ export function AdVideoPanel() {
               <div className="space-y-1">
                 <Label className="text-xs">Title (optional)</Label>
                 <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Click-through link (optional)</Label>
+                <Input value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} placeholder="https://..." />
               </div>
               <div className="flex items-center justify-between">
                 <Label className="text-xs">Active</Label>
