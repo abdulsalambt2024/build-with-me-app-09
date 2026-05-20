@@ -187,11 +187,13 @@ export function AdVideoPanel() {
       </CardHeader>
       <CardContent className="space-y-2 p-3 pt-0">
         {ads && ads.length > 0 && (
-          isImageUrl(ads[0].video_url) ? (
-            <img src={ads[0].video_url} alt={ads[0].title || 'Advertisement'} className="w-full aspect-video object-cover bg-black rounded-lg" />
-          ) : (
-            <video src={ads[0].video_url} controls playsInline className="w-full aspect-video bg-black rounded-lg" />
-          )
+          <div className="w-full bg-black rounded-lg overflow-hidden flex items-center justify-center max-h-[50vh]">
+            {isImageUrl(ads[0].video_url) ? (
+              <img src={ads[0].video_url} alt={ads[0].title || 'Advertisement'} className="max-h-[50vh] max-w-full w-auto h-auto object-contain" />
+            ) : (
+              <video src={ads[0].video_url} controls playsInline className="max-h-[50vh] max-w-full w-auto h-auto" />
+            )}
+          </div>
         )}
         <div className="space-y-1">
           {(allAds || []).map((ad) => (
