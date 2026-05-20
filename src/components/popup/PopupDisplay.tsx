@@ -24,7 +24,13 @@ export function PopupDisplay() {
   const queryClient = useQueryClient();
   const [currentPopup, setCurrentPopup] = useState<Popup | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const storageKey = user?.id ? `popup-dismissed-${user.id}` : 'popup-dismissed-guest';
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch { return new Set<string>(); }
+  });
 
   const isSuperAdmin = role === 'super_admin';
 
