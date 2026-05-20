@@ -298,6 +298,35 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_secrets: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          updated_at: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_secrets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           amount_presets: number[] | null
@@ -316,7 +345,6 @@ export type Database = {
           title: string
           updated_at: string | null
           upi_id: string | null
-          webhook_secret: string | null
         }
         Insert: {
           amount_presets?: number[] | null
@@ -335,7 +363,6 @@ export type Database = {
           title: string
           updated_at?: string | null
           upi_id?: string | null
-          webhook_secret?: string | null
         }
         Update: {
           amount_presets?: number[] | null
@@ -354,7 +381,6 @@ export type Database = {
           title?: string
           updated_at?: string | null
           upi_id?: string | null
-          webhook_secret?: string | null
         }
         Relationships: []
       }
