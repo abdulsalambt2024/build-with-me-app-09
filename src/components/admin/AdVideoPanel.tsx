@@ -118,11 +118,13 @@ export function AdVideoPanel() {
     return (
       <Card className="border-0 shadow-soft overflow-hidden">
         <CardContent className="p-0">
-          {isImageUrl(u) ? (
-            <img src={u} alt={ads[0].title || 'Advertisement'} className="w-full aspect-video object-cover bg-black" />
-          ) : (
-            <video src={u} controls playsInline className="w-full aspect-video bg-black" />
-          )}
+          <div className="w-full bg-black flex items-center justify-center max-h-[70vh]">
+            {isImageUrl(u) ? (
+              <img src={u} alt={ads[0].title || 'Advertisement'} className="max-h-[70vh] max-w-full w-auto h-auto object-contain" />
+            ) : (
+              <video src={u} controls playsInline className="max-h-[70vh] max-w-full w-auto h-auto" />
+            )}
+          </div>
           {ads[0].title && (
             <div className="p-2 text-xs font-medium text-muted-foreground">{ads[0].title}</div>
           )}
