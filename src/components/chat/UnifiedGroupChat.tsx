@@ -583,7 +583,7 @@ export function UnifiedGroupChat() {
           const file = e.target.files?.[0];
           if (!file) return;
           try {
-            const fileName = `${Date.now()}-${file.name}`;
+            const fileName = `${user?.id}/${Date.now()}-${file.name}`;
             const { error: uploadError } = await supabase.storage.from('chat-media').upload(fileName, file);
             if (uploadError) throw uploadError;
             const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(fileName);
