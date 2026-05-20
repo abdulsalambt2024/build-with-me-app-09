@@ -24,7 +24,13 @@ export function PopupDisplay() {
   const queryClient = useQueryClient();
   const [currentPopup, setCurrentPopup] = useState<Popup | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const storageKey = user?.id ? `popup-dismissed-${user.id}` : 'popup-dismissed-guest';
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch { return new Set<string>(); }
+  });
 
   const isSuperAdmin = role === 'super_admin';
 
@@ -79,11 +85,15 @@ export function PopupDisplay() {
 
   const handleClose = useCallback(() => {
     if (currentPopup) {
-      setDismissedIds(prev => new Set(prev).add(currentPopup.id));
+      setDismissedIds(prev => {
+        const next = new Set(prev).add(currentPopup.id);
+        try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
+        return next;
+      });
     }
     setIsOpen(false);
     setCurrentPopup(null);
-  }, [currentPopup]);
+  }, [currentPopup, storageKey]);
 
   const handlePause = useCallback(() => {
     if (currentPopup) pausePopup.mutate(currentPopup.id);
@@ -124,9 +134,8 @@ export function PopupDisplay() {
           </div>
 
           {currentPopup.image_url && (
-            <div className="relative h-48 w-full">
-              <img src={currentPopup.image_url} alt={currentPopup.title} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+            <div className="relative w-full bg-black flex items-center justify-center max-h-[60vh] overflow-hidden">
+              <img src={currentPopup.image_url} alt={currentPopup.title} className="max-h-[60vh] max-w-full w-auto h-auto object-contain" />
             </div>
           )}
 

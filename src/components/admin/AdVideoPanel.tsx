@@ -118,11 +118,13 @@ export function AdVideoPanel() {
     return (
       <Card className="border-0 shadow-soft overflow-hidden">
         <CardContent className="p-0">
-          {isImageUrl(u) ? (
-            <img src={u} alt={ads[0].title || 'Advertisement'} className="w-full aspect-video object-cover bg-black" />
-          ) : (
-            <video src={u} controls playsInline className="w-full aspect-video bg-black" />
-          )}
+          <div className="w-full bg-black flex items-center justify-center max-h-[70vh]">
+            {isImageUrl(u) ? (
+              <img src={u} alt={ads[0].title || 'Advertisement'} className="max-h-[70vh] max-w-full w-auto h-auto object-contain" />
+            ) : (
+              <video src={u} controls playsInline className="max-h-[70vh] max-w-full w-auto h-auto" />
+            )}
+          </div>
           {ads[0].title && (
             <div className="p-2 text-xs font-medium text-muted-foreground">{ads[0].title}</div>
           )}
@@ -149,8 +151,12 @@ export function AdVideoPanel() {
             <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Ad Video</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs">Upload video or image</Label>
-                <Input type="file" accept="video/*,image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); }} disabled={upload.isPending} />
+                <Label className="text-xs">Upload video</Label>
+                <Input type="file" accept="video/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); }} disabled={upload.isPending} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Upload image (separate)</Label>
+                <Input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); }} disabled={upload.isPending} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Or paste media URL (video or image)</Label>
@@ -181,11 +187,13 @@ export function AdVideoPanel() {
       </CardHeader>
       <CardContent className="space-y-2 p-3 pt-0">
         {ads && ads.length > 0 && (
-          isImageUrl(ads[0].video_url) ? (
-            <img src={ads[0].video_url} alt={ads[0].title || 'Advertisement'} className="w-full aspect-video object-cover bg-black rounded-lg" />
-          ) : (
-            <video src={ads[0].video_url} controls playsInline className="w-full aspect-video bg-black rounded-lg" />
-          )
+          <div className="w-full bg-black rounded-lg overflow-hidden flex items-center justify-center max-h-[50vh]">
+            {isImageUrl(ads[0].video_url) ? (
+              <img src={ads[0].video_url} alt={ads[0].title || 'Advertisement'} className="max-h-[50vh] max-w-full w-auto h-auto object-contain" />
+            ) : (
+              <video src={ads[0].video_url} controls playsInline className="max-h-[50vh] max-w-full w-auto h-auto" />
+            )}
+          </div>
         )}
         <div className="space-y-1">
           {(allAds || []).map((ad) => (

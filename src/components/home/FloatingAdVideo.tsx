@@ -144,11 +144,11 @@ export function FloatingAdVideo() {
         </div>
       </div>
       {!minimized && (
-        <div onClick={handleMediaClick} className={ad.link_url ? 'cursor-pointer' : ''}>
+        <div onClick={handleMediaClick} className={`${ad.link_url ? 'cursor-pointer ' : ''}bg-black flex items-center justify-center max-h-[60vh]`}>
           {isImage ? (
-            <img src={url} alt={ad.title || 'Advertisement'} className="w-full aspect-video object-cover bg-black" draggable={false} />
+            <img src={url} alt={ad.title || 'Advertisement'} className="max-h-[60vh] max-w-full w-auto h-auto object-contain" draggable={false} />
           ) : (
-            <video src={url} controls autoPlay muted loop playsInline className="w-full aspect-video bg-black" />
+            <video src={url} controls autoPlay muted loop playsInline className="max-h-[60vh] max-w-full w-auto h-auto" />
           )}
         </div>
       )}
