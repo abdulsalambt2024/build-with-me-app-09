@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Message } from '@/hooks/useChat';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
+import { ImageViewer } from '@/components/posts/ImageViewer';
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -12,6 +13,7 @@ interface ChatMessagesProps {
 export function ChatMessages({ messages }: ChatMessagesProps) {
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [viewerImage, setViewerImage] = useState<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,7 +74,8 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
                   <img
                     src={message.media_url}
                     alt="Attachment"
-                    className="max-w-xs rounded-lg"
+                    className="max-w-xs rounded-lg cursor-zoom-in"
+                    onClick={() => setViewerImage(message.media_url!)}
                   />
                 )}
               </div>
@@ -81,6 +84,11 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
         );
       })}
       <div ref={messagesEndRef} />
+      <ImageViewer
+        images={viewerImage ? [viewerImage] : []}
+        open={!!viewerImage}
+        onOpenChange={(o) => !o && setViewerImage(null)}
+      />
     </div>
   );
 }
