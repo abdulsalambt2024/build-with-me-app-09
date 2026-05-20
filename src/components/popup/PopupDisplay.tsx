@@ -85,11 +85,15 @@ export function PopupDisplay() {
 
   const handleClose = useCallback(() => {
     if (currentPopup) {
-      setDismissedIds(prev => new Set(prev).add(currentPopup.id));
+      setDismissedIds(prev => {
+        const next = new Set(prev).add(currentPopup.id);
+        try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
+        return next;
+      });
     }
     setIsOpen(false);
     setCurrentPopup(null);
-  }, [currentPopup]);
+  }, [currentPopup, storageKey]);
 
   const handlePause = useCallback(() => {
     if (currentPopup) pausePopup.mutate(currentPopup.id);
