@@ -239,7 +239,7 @@ export function UnifiedGroupChat() {
       recorder.ondataavailable = e => chunks.push(e.data);
       recorder.onstop = async () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
-        const fileName = `voice-${Date.now()}.webm`;
+        const fileName = `${user?.id}/voice-${Date.now()}.webm`;
         const { error: uploadError } = await supabase.storage.from('chat-media').upload(fileName, blob);
         if (uploadError) { toast.error('Failed to upload voice message'); return; }
         const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(fileName);
@@ -563,7 +563,7 @@ export function UnifiedGroupChat() {
           const file = e.target.files?.[0];
           if (!file) return;
           try {
-            const fileName = `${Date.now()}-${file.name}`;
+            const fileName = `${user?.id}/${Date.now()}-${file.name}`;
             const { error: uploadError } = await supabase.storage.from('chat-media').upload(fileName, file);
             if (uploadError) throw uploadError;
             const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(fileName);
@@ -583,7 +583,7 @@ export function UnifiedGroupChat() {
           const file = e.target.files?.[0];
           if (!file) return;
           try {
-            const fileName = `${Date.now()}-${file.name}`;
+            const fileName = `${user?.id}/${Date.now()}-${file.name}`;
             const { error: uploadError } = await supabase.storage.from('chat-media').upload(fileName, file);
             if (uploadError) throw uploadError;
             const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(fileName);

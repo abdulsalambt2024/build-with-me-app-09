@@ -120,10 +120,13 @@ export function MediaUpload({ onMediaUploaded, existingMedia = [], maxFiles = 10
     try {
       // Compress image
       const compressedBlob = await compressImage(file);
-      
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const fileExt = 'jpg';
-      const fileName = `${Math.random().toString(36).substr(2, 9)}_${Date.now()}.${fileExt}`;
-      
+      const fileName = `${user.id}/${Math.random().toString(36).substr(2, 9)}_${Date.now()}.${fileExt}`;
+
       const { error: uploadError } = await supabase.storage
         .from('post-media')
         .upload(fileName, compressedBlob, {
