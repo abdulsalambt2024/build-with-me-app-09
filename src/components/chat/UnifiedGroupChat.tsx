@@ -239,7 +239,7 @@ export function UnifiedGroupChat() {
       recorder.ondataavailable = e => chunks.push(e.data);
       recorder.onstop = async () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
-        const fileName = `voice-${Date.now()}.webm`;
+        const fileName = `${user?.id}/voice-${Date.now()}.webm`;
         const { error: uploadError } = await supabase.storage.from('chat-media').upload(fileName, blob);
         if (uploadError) { toast.error('Failed to upload voice message'); return; }
         const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(fileName);
