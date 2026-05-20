@@ -134,9 +134,8 @@ export function PopupDisplay() {
           </div>
 
           {currentPopup.image_url && (
-            <div className="relative h-48 w-full">
-              <img src={currentPopup.image_url} alt={currentPopup.title} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+            <div className="relative w-full bg-black flex items-center justify-center max-h-[60vh] overflow-hidden">
+              <img src={currentPopup.image_url} alt={currentPopup.title} className="max-h-[60vh] max-w-full w-auto h-auto object-contain" />
             </div>
           )}
 
