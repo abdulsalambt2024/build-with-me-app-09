@@ -85,12 +85,11 @@ Guidelines:
     ];
     
     // Add conversation history
-    if (conversationHistory && conversationHistory.length > 0) {
-      for (const msg of conversationHistory) {
-        messages.push({
-          role: msg.role,
-          content: msg.content
-        });
+    if (cappedHistory.length > 0) {
+      for (const msg of cappedHistory) {
+        if (msg && typeof msg.role === 'string' && typeof msg.content === 'string') {
+          messages.push({ role: msg.role, content: msg.content.slice(0, 4000) });
+        }
       }
     }
     
