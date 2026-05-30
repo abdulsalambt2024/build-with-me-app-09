@@ -132,7 +132,6 @@ export default function CampaignDetail() {
           await supabase.functions.invoke('send-donation-email', {
             body: {
               type: 'donation_success',
-              recipientEmail: '', // Would need donor email - skipping for now
               recipientName: donationForm.donor_name,
               donationAmount: parseFloat(donationForm.amount),
               campaignTitle: campaign?.title,

@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,30 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated caller
+    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { message, faqContext, conversationHistory } = await req.json();
+
+    // Cap conversation history to prevent prompt injection / abuse
+    const cappedHistory = Array.isArray(conversationHistory) ? conversationHistory.slice(-20) : [];
+    if (typeof message !== 'string' || message.length > 4000) {
+      return new Response(JSON.stringify({ error: 'Invalid message' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
@@ -61,12 +85,11 @@ Guidelines:
     ];
     
     // Add conversation history
-    if (conversationHistory && conversationHistory.length > 0) {
-      for (const msg of conversationHistory) {
-        messages.push({
-          role: msg.role,
-          content: msg.content
-        });
+    if (cappedHistory.length > 0) {
+      for (const msg of cappedHistory) {
+        if (msg && typeof msg.role === 'string' && typeof msg.content === 'string') {
+          messages.push({ role: msg.role, content: msg.content.slice(0, 4000) });
+        }
       }
     }
     

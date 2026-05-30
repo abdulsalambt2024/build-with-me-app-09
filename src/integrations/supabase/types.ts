@@ -1704,6 +1704,13 @@ export type Database = {
         }
         Returns: string
       }
+      get_my_private_profile_fields: {
+        Args: never
+        Returns: {
+          date_of_birth: string
+          father_name: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

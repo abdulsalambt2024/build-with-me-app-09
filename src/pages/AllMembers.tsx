@@ -57,7 +57,7 @@ export default function AllMembers() {
     queryFn: async () => {
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name, avatar_url, bio, branch, course, semester, year, roll_number, father_name, date_of_birth, created_at')
+        .select('user_id, full_name, avatar_url, bio, branch, course, semester, year, roll_number, created_at')
         .eq('is_disabled', false)
         .order('full_name');
       const { data: roles } = await supabase.from('user_roles').select('user_id, role');

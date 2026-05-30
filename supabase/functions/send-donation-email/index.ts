@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -10,7 +11,6 @@ const corsHeaders = {
 
 interface EmailRequest {
   type: "donation_success" | "payment_confirmation" | "campaign_update";
-  recipientEmail: string;
   recipientName?: string;
   donationAmount?: number;
   campaignTitle?: string;
@@ -20,21 +20,54 @@ interface EmailRequest {
 }
 
 serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { 
-      type, 
-      recipientEmail, 
-      recipientName, 
-      donationAmount, 
+    // Require authenticated caller
+    const authHeader = req.headers.get("Authorization")?.replace("Bearer ", "");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader);
+    if (authError || !user?.email) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const {
+      type,
+      recipientName,
+      donationAmount,
       campaignTitle,
       transactionId,
-      message 
+      message,
     }: EmailRequest = await req.json();
+
+    // Always send to the authenticated user's email — never trust client input
+    const recipientEmail = user.email;
+
+    // If a transactionId is provided, verify the donation/transaction belongs to caller
+    if (transactionId) {
+      const { data: tx } = await supabase
+        .from("payment_transactions")
+        .select("user_id")
+        .eq("payment_id", transactionId)
+        .maybeSingle();
+      if (tx && tx.user_id && tx.user_id !== user.id) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     console.log(`Sending ${type} email to ${recipientEmail}`);
 
