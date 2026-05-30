@@ -62,7 +62,7 @@ export function TwoFactorAuth() {
   const verifyMutation = useMutation({
     mutationFn: async (code: string) => {
       const { data, error } = await supabase.functions.invoke('verify-2fa', {
-        body: { token: code, secret }
+        body: { token: code }
       });
       if (error) throw error;
       return data;
