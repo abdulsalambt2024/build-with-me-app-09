@@ -17,9 +17,15 @@ export default function Profile() {
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user?.id).single();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name,bio,avatar_url,course,branch,roll_number,year,semester')
+        .eq('user_id', user?.id)
+        .single();
       if (error) throw error;
-      return data;
+      const { data: priv } = await supabase.rpc('get_my_private_profile_fields');
+      const privateFields = Array.isArray(priv) && priv[0] ? priv[0] : { father_name: null, date_of_birth: null };
+      return { ...data, ...privateFields };
     },
     enabled: !!user?.id
   });
