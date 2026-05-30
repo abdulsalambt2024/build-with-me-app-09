@@ -34,19 +34,33 @@ serve(async (req) => {
       );
     }
 
-    const { token, secret } = await req.json();
+    const { token } = await req.json();
     const userId = user.id;
-    
-    // Create TOTP instance
+
+    // Fetch the stored 2FA secret from DB (do NOT trust client-supplied secret)
+    const { data: row, error: rowErr } = await supabase
+      .from('user_2fa')
+      .select('secret')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (rowErr || !row?.secret) {
+      return new Response(
+        JSON.stringify({ error: '2FA setup not found' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create TOTP instance from server-stored secret
     const totp = new OTPAuth.TOTP({
-      secret: OTPAuth.Secret.fromBase32(secret),
+      secret: OTPAuth.Secret.fromBase32(row.secret),
       digits: 6,
       period: 30,
     });
-    
+
     // Verify token
     const delta = totp.validate({ token, window: 1 });
-    
+
     if (delta === null) {
       throw new Error('Invalid token');
     }
