@@ -37,23 +37,29 @@ export default function ProfileEdit() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('full_name,bio,avatar_url,course,branch,roll_number,year,semester')
         .eq('user_id', user?.id)
         .single();
 
       if (error) throw error;
+
+      // Private fields (father_name, date_of_birth) are not readable via
+      // direct SELECT — fetch via secure RPC scoped to auth.uid().
+      const { data: priv } = await supabase.rpc('get_my_private_profile_fields');
+      const privateFields = Array.isArray(priv) && priv[0] ? priv[0] : { father_name: '', date_of_birth: '' };
+
       if (data) {
         setFormData({
           full_name: data.full_name || '',
           bio: data.bio || '',
           avatar_url: data.avatar_url || '',
-          father_name: data.father_name || '',
+          father_name: privateFields.father_name || '',
           course: data.course || '',
           branch: data.branch || '',
           roll_number: data.roll_number || '',
           year: data.year || '',
           semester: data.semester || '',
-          date_of_birth: data.date_of_birth || '',
+          date_of_birth: privateFields.date_of_birth || '',
         });
       }
     } catch (error) {
