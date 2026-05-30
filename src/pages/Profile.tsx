@@ -19,7 +19,7 @@ export default function Profile() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name,bio,avatar_url,course,branch,roll_number,year,semester')
+        .select('full_name,bio,avatar_url,course,branch,roll_number,year,semester,created_at')
         .eq('user_id', user?.id)
         .single();
       if (error) throw error;
