@@ -13,6 +13,27 @@ serve(async (req) => {
   }
 
   try {
+    // Require a shared webhook secret to prevent unauthenticated callers
+    // from forging payment confirmations.
+    const webhookSecret = Deno.env.get('PAYMENT_WEBHOOK_SECRET');
+    if (!webhookSecret) {
+      console.error('PAYMENT_WEBHOOK_SECRET is not configured');
+      return new Response(
+        JSON.stringify({ error: 'Webhook not configured' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const providedSecret =
+      req.headers.get('x-webhook-secret') ||
+      req.headers.get('X-Webhook-Secret') ||
+      req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+    if (providedSecret !== webhookSecret) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
