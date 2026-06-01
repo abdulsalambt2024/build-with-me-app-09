@@ -44,6 +44,8 @@ const AdVideos = lazy(() => import("./pages/admin/AdVideos"));
 const PerformanceDashboard = lazy(() => import("./pages/PerformanceDashboard"));
 const AppGuide = lazy(() => import("./pages/AppGuide"));
 const AllMembers = lazy(() => import("./pages/AllMembers"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const SecurityReport = lazy(() => import("./pages/admin/SecurityReport"));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
 const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -127,6 +129,8 @@ const App = () => (
                     <Route path="/performance" element={<Layout><ProtectedRoute><PerformanceDashboard /></ProtectedRoute></Layout>} />
                     <Route path="/guide" element={<Layout><ProtectedRoute><AppGuide /></ProtectedRoute></Layout>} />
                     <Route path="/members" element={<Layout><ProtectedRoute><AllMembers /></ProtectedRoute></Layout>} />
+                    <Route path="/users/:userId" element={<Layout><ProtectedRoute><UserProfile /></ProtectedRoute></Layout>} />
+                    <Route path="/admin/security-report" element={<Layout><ProtectedRoute requiredRole="super_admin"><SecurityReport /></ProtectedRoute></Layout>} />
                     <Route path="/donations/:id" element={<Layout><ProtectedRoute><CampaignDetail /></ProtectedRoute></Layout>} />
                     <Route path="/settings" element={<Layout><ProtectedRoute><Settings /></ProtectedRoute></Layout>} />
                     <Route path="/help" element={<Layout><ProtectedRoute><Help /></ProtectedRoute></Layout>} />

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +13,7 @@ interface ChatMessagesProps {
 
 export function ChatMessages({ messages }: ChatMessagesProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [viewerImage, setViewerImage] = useState<string | null>(null);
 
@@ -36,7 +38,10 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
             key={message.id}
             className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
           >
-            <Avatar className="h-8 w-8">
+            <Avatar
+              className={`h-8 w-8 ${!isOwn ? 'cursor-pointer' : ''}`}
+              onClick={() => !isOwn && navigate(`/users/${message.user_id}`)}
+            >
               <AvatarImage src={message.user?.avatar_url || ''} />
               <AvatarFallback>
                 {message.user?.full_name?.[0] || 'U'}
@@ -46,7 +51,10 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
               <div className="flex items-center gap-2 mb-1">
                 {!isOwn && (
                   <>
-                    <span className="text-sm font-medium">
+                    <span
+                      className="text-sm font-medium cursor-pointer hover:underline"
+                      onClick={() => navigate(`/users/${message.user_id}`)}
+                    >
                       {message.user?.full_name || 'Unknown User'}
                     </span>
                     <VerifiedBadge userId={message.user_id} />
