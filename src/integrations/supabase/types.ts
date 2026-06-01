@@ -1704,6 +1704,36 @@ export type Database = {
         }
         Returns: string
       }
+      get_full_profile_admin: {
+        Args: { _user_id: string }
+        Returns: {
+          avatar_url: string | null
+          bio: string | null
+          branch: string | null
+          course: string | null
+          created_at: string
+          date_of_birth: string | null
+          disabled_at: string | null
+          disabled_by: string | null
+          disabled_reason: string | null
+          father_name: string | null
+          full_name: string | null
+          id: string
+          is_disabled: boolean
+          role: string | null
+          roll_number: string | null
+          semester: string | null
+          updated_at: string
+          user_id: string
+          year: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_my_private_profile_fields: {
         Args: never
         Returns: {
