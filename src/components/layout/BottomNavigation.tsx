@@ -16,7 +16,7 @@ export function BottomNavigation() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-strong border-t md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-strong border-t">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {navItems.map((item) => (
           <NavLink key={item.to} to={item.to}>
