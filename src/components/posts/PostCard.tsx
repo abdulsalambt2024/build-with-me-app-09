@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Share2, MoreVertical, Send, X, Pin } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,6 +30,8 @@ interface PostCardProps {
 
 export function PostCard({ post, onDelete }: PostCardProps) {
   const { user, role } = useAuth();
+  const navigate = useNavigate();
+  const goToProfile = () => navigate(`/users/${post.user_id}`);
   const likePost = useLikePost();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -126,7 +129,7 @@ export function PostCard({ post, onDelete }: PostCardProps) {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
+              <Avatar className="h-9 w-9 cursor-pointer" onClick={goToProfile}>
                 <AvatarImage src={post.profiles?.avatar_url} />
                 <AvatarFallback className="text-xs">
                   {post.profiles?.full_name?.[0]?.toUpperCase() || 'U'}
@@ -134,7 +137,12 @@ export function PostCard({ post, onDelete }: PostCardProps) {
               </Avatar>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="font-semibold text-sm">{post.profiles?.full_name || 'Unknown User'}</p>
+                  <p
+                    className="font-semibold text-sm cursor-pointer hover:underline"
+                    onClick={goToProfile}
+                  >
+                    {post.profiles?.full_name || 'Unknown User'}
+                  </p>
                   <VerifiedBadge userId={post.user_id} />
                   {(post as any).is_pinned && (
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
